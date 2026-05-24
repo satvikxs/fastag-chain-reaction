@@ -76,11 +76,11 @@ function LandingIntro() {
         of vehicles and sends a shockwave backward up the highway. We catch the failure{" "}
         <span className="font-semibold">5 km before the toll</span> — so the driver recharges on open road
         and the{" "}
-        <span className="relative inline-grid h-[1.2em] w-[5.5ch] align-bottom">
+        <span className="relative inline-flex h-[1em] w-[5.5ch] items-center overflow-hidden align-baseline">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={CYCLE[word]}
-              className="col-start-1 row-start-1 whitespace-nowrap font-semibold underline decoration-[#111]/25 underline-offset-4"
+              className="whitespace-nowrap font-semibold underline decoration-[#111]/25 underline-offset-4"
               initial={{ opacity: 0, y: 6, filter: "blur(4px)", scale: 0.25 }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
               exit={{ opacity: 0, y: -4, filter: "blur(4px)", scale: 0.25 }}
