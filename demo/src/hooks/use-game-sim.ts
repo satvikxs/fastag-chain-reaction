@@ -85,21 +85,32 @@ export type GameHud = {
 };
 
 // createGameEngine
+// Without-app scenario: pack lots of cars behind the player so the chain
+// reaction queue is clearly visible when the player's FASTag is declined.
 function createGameEngine(withApp: boolean): SimEngine {
-  const n = 28;
-  const sp = 6;
-  const playerId = 1 * n + (n - 1);
+  // Each lane gets a different population so the middle lane (player's lane)
+  // has the longest tail of cars to visualize a real chain reaction.
+  const counts = withApp ? [22, 28, 22] : [34, 64, 34];
+  const spacing = withApp ? 7 : 4;
+  const PLAYER_LANE = 1;
+  const playerIndexInLane = counts[PLAYER_LANE]! - 1;
+  const playerId = PLAYER_LANE * 1000 + playerIndexInLane;
+
   return {
-    lanes: Array.from({ length: LANE_COUNT }, (_, lane) => ({
-      positions: Array.from({ length: n }, (_, i) => START_CELLS - (n - 1 - i) * sp + lane),
-      velocities: Array.from({ length: n }, () => GAME_VMAX),
-      blockedUntil: -1,
-      stallTriggered: false,
-      canStall: !withApp && lane === 1,
-      lane,
-      nextId: lane * n + n,
-      ids: Array.from({ length: n }, (_, i) => lane * n + i),
-    })),
+    lanes: Array.from({ length: LANE_COUNT }, (_, lane) => {
+      const n = counts[lane]!;
+      const sp = lane === PLAYER_LANE ? spacing : spacing + 1;
+      return {
+        positions: Array.from({ length: n }, (_, i) => START_CELLS - (n - 1 - i) * sp + lane),
+        velocities: Array.from({ length: n }, () => GAME_VMAX),
+        blockedUntil: -1,
+        stallTriggered: false,
+        canStall: !withApp && lane === PLAYER_LANE,
+        lane,
+        nextId: lane * 1000 + n,
+        ids: Array.from({ length: n }, (_, i) => lane * 1000 + i),
+      };
+    }),
     timeStep: 0,
     carsThrough: 0,
     fuelWasted: 0,

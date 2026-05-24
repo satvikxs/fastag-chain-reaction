@@ -2,164 +2,214 @@
 
 import { useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
+import { AdaptiveDpr } from "@react-three/drei";
 import { ACESFilmicToneMapping } from "three";
+import { AnimatePresence, motion } from "motion/react";
 import { Pause, Play, RotateCcw, Repeat } from "lucide-react";
 import { useGameSim, TOLL_Z_LOCAL, LANE_WIDTH, type GameHud, type GameFrameData } from "@/hooks/use-game-sim";
 import { VEHICLE } from "@/lib/demo/constants";
 import { PhoneStatusBar } from "@/components/demo/phone-frame";
 import { Scene3D } from "./scene-3d";
 
+const cardEnter = {
+  initial: { opacity: 0, y: -8, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -6, scale: 0.98 },
+  transition: { duration: 0.22, ease: [0.22, 0.84, 0.42, 1] as [number, number, number, number] },
+};
+
 // GtaView
 export function GtaView() {
   const { tick, frameData, hud, reset, toggleScenario, setSpeed, toggleRunning } = useGameSim();
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#040d1a]">
+    <div className="relative h-screen w-screen overflow-hidden bg-[#040d1a] font-sans antialiased">
       <Canvas
-        camera={{ fov: 65, near: 0.5, far: 800, position: [0, 3, -8] }}
-        dpr={[1, 1.5]}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        camera={{ fov: 62, near: 0.5, far: 1100, position: [0, 3, -8] }}
+        dpr={[1, 1.6]}
+        gl={{ antialias: true, powerPreference: "high-performance", stencil: false }}
         onCreated={({ gl }) => {
           gl.toneMapping = ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.2;
+          gl.toneMappingExposure = 1.18;
         }}
         className="absolute inset-0"
       >
+        <AdaptiveDpr pixelated />
         <Scene3D tick={tick} frameRef={frameData} />
       </Canvas>
 
-      {/* vignette */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(0,0,0,0.6)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(0,0,0,0.62)_100%)]" />
 
-      {/* toll distance indicator */}
+      <TopBar hud={hud} toggleScenario={toggleScenario} />
+      <ControlBar hud={hud} setSpeed={setSpeed} toggleRunning={toggleRunning} reset={reset} />
+
       <TollDistanceSign hud={hud} />
-
-      {/* FASTag scanning overlay */}
       <ScanOverlay hud={hud} />
-
-      {/* decline overlay */}
       <DeclineOverlay hud={hud} />
-
-      {/* waiting impact counter */}
       <ImpactCounter hud={hud} />
-
-      {/* with-app notifications */}
       <AppNotification hud={hud} />
-
-      {/* approved overlay */}
       <ApprovedOverlay hud={hud} />
 
-      {/* controls */}
-      <div className="absolute right-4 top-4 z-30 flex items-center gap-2">
-        {[2, 4, 6].map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setSpeed(s)}
-            className={`size-9 rounded-lg text-[11px] font-bold transition-transform active:scale-[0.96] ${
-              hud.speed === s ? "bg-amber-500 text-black" : "bg-black/40 text-white/70 backdrop-blur"
-            }`}
-          >
-            {s}x
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={toggleRunning}
-          className="flex size-9 items-center justify-center rounded-lg bg-black/40 text-white backdrop-blur transition-transform active:scale-[0.96]"
-        >
-          {hud.running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-        </button>
-        <button
-          type="button"
-          onClick={reset}
-          className="flex size-9 items-center justify-center rounded-lg bg-black/40 text-white backdrop-blur transition-transform active:scale-[0.96]"
-        >
-          <RotateCcw className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={toggleScenario}
-          className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-[11px] font-extrabold text-black transition-transform active:scale-[0.96]"
-        >
-          <Repeat className="size-3" />
-          {hud.withApp ? "WITHOUT APP" : "WITH APP"}
-        </button>
-      </div>
+      <Speedometer hud={hud} />
+      <Minimap frameData={frameData} />
+      <PhoneOverlay hud={hud} />
+    </div>
+  );
+}
 
-      {/* scenario badge */}
-      <div className="absolute left-4 top-4 z-30">
-        <div
-          className={`rounded-lg px-3 py-1.5 text-xs font-extrabold backdrop-blur ${
-            hud.withApp
-              ? "border border-green-500/30 bg-green-950/60 text-green-400"
-              : "border border-red-500/30 bg-red-950/60 text-red-400"
+// TopBar
+function TopBar({ hud, toggleScenario }: { hud: GameHud; toggleScenario: () => void }) {
+  return (
+    <div className="absolute left-4 top-4 z-30 flex items-center gap-2">
+      <div
+        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-md ${
+          hud.withApp
+            ? "border-emerald-400/30 bg-emerald-950/60 text-emerald-300"
+            : "border-rose-400/30 bg-rose-950/60 text-rose-300"
+        }`}
+      >
+        <span className={`size-1.5 rounded-full ${hud.withApp ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" : "bg-rose-400 shadow-[0_0_8px_rgba(244,114,182,0.7)]"} animate-pulse`} />
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em]">
+          {hud.withApp ? "Chain Reaction Guard ON" : "No Protection"}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={toggleScenario}
+        className="flex items-center gap-1.5 rounded-full bg-amber-500/95 px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-zinc-950 shadow-[0_8px_24px_-8px_rgba(245,158,11,0.6)] transition-transform hover:scale-[1.02] active:scale-[0.97]"
+      >
+        <Repeat className="size-3" />
+        {hud.withApp ? "Try without app" : "Try with app"}
+      </button>
+    </div>
+  );
+}
+
+// ControlBar
+function ControlBar({
+  hud,
+  setSpeed,
+  toggleRunning,
+  reset,
+}: {
+  hud: GameHud;
+  setSpeed: (s: number) => void;
+  toggleRunning: () => void;
+  reset: () => void;
+}) {
+  return (
+    <div className="absolute right-4 top-4 z-30 flex items-center gap-1.5 rounded-full border border-white/10 bg-zinc-950/55 p-1 backdrop-blur-md">
+      {[2, 4, 6].map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => setSpeed(s)}
+          className={`min-w-[34px] rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums transition ${
+            hud.speed === s
+              ? "bg-amber-500 text-zinc-950"
+              : "text-zinc-300 hover:bg-white/8"
           }`}
         >
-          {hud.withApp ? "WITH OUR APP" : "WITHOUT APP"}
-        </div>
-      </div>
-
-      {/* speedometer */}
-      <div className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2 text-center">
-        <span className="text-5xl font-extrabold tabular-nums text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
-          {Math.round(hud.playerSpeed)}
-        </span>
-        <span className="ml-1 text-sm font-bold text-white/35">km/h</span>
-      </div>
-
-      {/* minimap */}
-      <Minimap frameData={frameData} />
-
-      {/* phone */}
-      <PhoneOverlay hud={hud} />
+          {s}x
+        </button>
+      ))}
+      <div className="mx-0.5 h-5 w-px bg-white/10" />
+      <button
+        type="button"
+        onClick={toggleRunning}
+        className="flex size-8 items-center justify-center rounded-full text-zinc-200 transition hover:bg-white/8 active:scale-95"
+        aria-label={hud.running ? "Pause" : "Play"}
+      >
+        {hud.running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+      </button>
+      <button
+        type="button"
+        onClick={reset}
+        className="flex size-8 items-center justify-center rounded-full text-zinc-200 transition hover:bg-white/8 active:scale-95"
+        aria-label="Reset"
+      >
+        <RotateCcw className="size-3.5" />
+      </button>
     </div>
   );
 }
 
 // TollDistanceSign
 function TollDistanceSign({ hud }: { hud: GameHud }) {
-  if (hud.phase !== "approaching" && hud.phase !== "driving") return null;
-  if (hud.distToToll > 280 || hud.distToToll < 15) return null;
-
-  const dist =
-    hud.distToToll >= 1000
-      ? `${(hud.distToToll / 1000).toFixed(1)} km`
-      : `${Math.round(hud.distToToll)} m`;
+  const visible = (hud.phase === "approaching" || hud.phase === "driving") && hud.distToToll <= 280 && hud.distToToll >= 15;
+  const dist = hud.distToToll >= 1000 ? `${(hud.distToToll / 1000).toFixed(1)} km` : `${Math.round(hud.distToToll)} m`;
 
   return (
-    <div className="absolute left-1/2 top-20 z-30 -translate-x-1/2">
-      <div className="rounded-xl border border-white/10 bg-[#006838]/90 px-6 py-3 text-center backdrop-blur-sm">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-white/70">LAKHANPUR TOLL PLAZA</div>
-        <div className="text-[10px] text-yellow-300/70">लखनपुर टोल प्लाज़ा</div>
-        <div className="mt-1 text-2xl font-extrabold tabular-nums text-white">{dist}</div>
-        <div className="mt-0.5 text-[9px] text-white/50">FASTag Speed Maintained</div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {visible ? (
+        <motion.div {...cardEnter} className="absolute left-1/2 top-20 z-30 -translate-x-1/2">
+          <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#006838]/92 px-7 py-3 text-center shadow-[0_18px_42px_-18px_rgba(0,0,0,0.7)] backdrop-blur-sm">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/80">Lakhanpur Toll Plaza</div>
+            <div className="mt-0.5 text-[10px] font-semibold text-amber-200/80">लखनपुर टोल प्लाज़ा</div>
+            <div className="mt-1.5 font-mono text-3xl font-extrabold tabular-nums tracking-tight text-white">{dist}</div>
+            <div className="mt-0.5 text-[9px] uppercase tracking-[0.18em] text-white/55">FASTag electronic toll</div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
 // ScanOverlay
 function ScanOverlay({ hud }: { hud: GameHud }) {
-  if (hud.phase !== "scanning") return null;
   return (
-    <div className="absolute left-1/2 top-14 z-40 -translate-x-1/2">
-      <div className="rounded-xl border border-purple-500/30 bg-[#1a1a2e]/90 px-6 py-2.5 text-center backdrop-blur-md">
-        <div className="text-sm font-extrabold text-purple-400">Reading FASTag… JK-02-AB-1234</div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {hud.phase === "scanning" ? (
+        <motion.div {...cardEnter} className="absolute left-1/2 top-14 z-40 -translate-x-1/2">
+          <div className="flex items-center gap-3 rounded-full border border-violet-400/40 bg-[#1a1a2e]/92 px-5 py-2.5 backdrop-blur-md">
+            <div className="relative">
+              <span className="absolute inset-0 animate-ping rounded-full bg-violet-400/50" />
+              <span className="relative block size-2 rounded-full bg-violet-300" />
+            </div>
+            <span className="font-mono text-[12.5px] font-bold tracking-wide text-violet-200">
+              Reading FASTag <span className="text-violet-100/80">JK 02 AB 1234</span>
+            </span>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
 // DeclineOverlay
 function DeclineOverlay({ hud }: { hud: GameHud }) {
-  if (hud.phase !== "declined") return null;
   return (
-    <div className="absolute left-1/2 top-14 z-40 w-[min(420px,calc(100%-2rem))] -translate-x-1/2">
-      <div className="rounded-xl border-2 border-red-500/50 bg-red-950/92 px-5 py-3 text-center backdrop-blur-md">
-        <div className="text-2xl font-extrabold text-red-400">✕ FASTag DECLINED</div>
-        <div className="mt-1 text-sm text-white/70">Balance ₹45 · Toll ₹185 · Shortfall ₹140</div>
-        <div className="mt-1 text-[11px] text-red-300/60">Proceed to manual payment · Boom stays down</div>
+    <AnimatePresence>
+      {hud.phase === "declined" ? (
+        <motion.div {...cardEnter} className="absolute left-1/2 top-14 z-40 w-[min(440px,calc(100%-2rem))] -translate-x-1/2">
+          <div className="relative overflow-hidden rounded-2xl border border-rose-500/50 bg-rose-950/94 backdrop-blur-md">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-rose-500 via-rose-300 to-rose-500" />
+            <div className="px-5 py-3.5 text-center">
+              <div className="font-display text-[22px] font-extrabold tracking-tight text-rose-200">FASTag declined</div>
+              <div className="mt-1.5 grid grid-cols-3 gap-2 text-left">
+                <KV label="Balance" value="₹45" />
+                <KV label="Toll" value="₹185" />
+                <KV label="Short" value="₹140" danger />
+              </div>
+              <div className="mt-2 text-[10.5px] font-semibold tracking-wide text-rose-200/70">
+                Proceed to manual payment booth. Boom stays down.
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+// KV
+function KV({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <div className="rounded-lg border border-white/8 bg-black/25 px-2 py-1.5">
+      <div className="text-[8.5px] font-bold uppercase tracking-[0.14em] text-white/45">{label}</div>
+      <div className={`font-mono mt-0.5 text-base font-extrabold tabular-nums ${danger ? "text-rose-300" : "text-white"}`}>
+        {value}
       </div>
     </div>
   );
@@ -167,96 +217,129 @@ function DeclineOverlay({ hud }: { hud: GameHud }) {
 
 // ImpactCounter
 function ImpactCounter({ hud }: { hud: GameHud }) {
-  if (hud.phase !== "waiting") return null;
-
+  const visible = hud.phase === "waiting";
   const waitSec = hud.waitSeconds;
   const personSeconds = hud.queueLength * waitSec;
   const fuelCost = Math.round(hud.queueLength * waitSec * 0.4);
   const co2 = (hud.queueLength * waitSec * 0.002).toFixed(1);
 
   return (
-    <div className="absolute left-1/2 top-14 z-40 w-[min(520px,calc(100%-2rem))] -translate-x-1/2">
-      <div className="rounded-xl border border-red-500/30 bg-[#1a0a0a]/92 px-4 py-3 backdrop-blur-md">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs font-extrabold uppercase tracking-wider text-red-400">
-            ⚠ Chain Reaction — FASTag Declined
+    <AnimatePresence>
+      {visible ? (
+        <motion.div {...cardEnter} className="absolute left-1/2 top-14 z-40 w-[min(560px,calc(100%-2rem))] -translate-x-1/2">
+          <div className="relative overflow-hidden rounded-2xl border border-rose-500/35 bg-[#140707]/94 backdrop-blur-md">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-rose-600 via-rose-400 to-rose-600" />
+            <div className="flex items-center justify-between gap-3 border-b border-white/6 px-4 pb-2 pt-3">
+              <div className="flex items-center gap-2">
+                <span className="size-2 animate-pulse rounded-full bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.7)]" />
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-rose-300">
+                  Chain reaction in progress
+                </span>
+              </div>
+              <span className="font-mono text-xs font-bold tabular-nums text-rose-200/80">
+                {waitSec}s blocked, {hud.queueLength} cars stuck
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 p-3">
+              <ImpactStat label="Queue" value={String(hud.queueLength)} />
+              <ImpactStat label="Person sec" value={personSeconds.toLocaleString("en-IN")} />
+              <ImpactStat label="Fuel loss" value={`₹${fuelCost.toLocaleString("en-IN")}`} />
+              <ImpactStat label="CO₂" value={`${co2} kg`} />
+            </div>
+            <div className="border-t border-white/6 px-4 py-2 text-center text-[10.5px] tracking-wide text-white/55">
+              ₹140 shortfall triggers a 90 second manual payment. Everyone behind waits.
+            </div>
           </div>
-          <div className="tabular-nums text-sm font-bold text-red-300">
-            {waitSec}s waiting · {hud.queueLength} cars stuck
-          </div>
-        </div>
-
-        <div className="mt-2 grid grid-cols-4 gap-2">
-          <ImpactStat label="Queue" value={String(hud.queueLength)} icon="🚗" danger />
-          <ImpactStat label="Time lost" value={personSeconds.toLocaleString("en-IN")} icon="⏱" danger />
-          <ImpactStat label="Fuel cost" value={`₹${fuelCost.toLocaleString("en-IN")}`} icon="⛽" danger />
-          <ImpactStat label="CO₂" value={`${co2}kg`} icon="💨" danger />
-        </div>
-
-        <div className="mt-2 text-center text-[11px] text-white/50">
-          ₹140 shortfall → 90s manual payment → everyone behind you waits
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
 // ImpactStat
-function ImpactStat({
-  label,
-  value,
-  icon,
-  danger,
-}: {
-  label: string;
-  value: string;
-  icon: string;
-  danger?: boolean;
-}) {
+function ImpactStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-white/4 px-2 py-1.5 text-center">
-      <div className="text-[9px] text-white/40">{icon}</div>
-      <div className={`text-sm font-extrabold tabular-nums ${danger ? "text-red-400" : "text-green-400"}`}>
-        {value}
-      </div>
-      <div className="text-[8px] text-white/30">{label}</div>
+    <div className="rounded-xl border border-white/6 bg-white/[0.035] px-2 py-2 text-center">
+      <div className="text-[8.5px] font-bold uppercase tracking-[0.14em] text-white/40">{label}</div>
+      <div className="font-mono mt-1 text-base font-extrabold tabular-nums text-rose-300">{value}</div>
     </div>
   );
 }
 
 // AppNotification
 function AppNotification({ hud }: { hud: GameHud }) {
-  if (hud.phase !== "notification" && hud.phase !== "recharging") return null;
+  const isNotify = hud.phase === "notification";
+  const isRecharge = hud.phase === "recharging";
 
   return (
-    <div className="absolute left-1/2 top-14 z-40 w-[min(420px,calc(100%-2rem))] -translate-x-1/2">
-      <div className="rounded-xl border border-amber-500/30 bg-[#1a1400]/92 px-4 py-3 text-center backdrop-blur-md">
-        {hud.phase === "notification" && (
-          <>
-            <div className="text-xs font-extrabold uppercase tracking-wider text-amber-400">
-              FASTag Chain Reaction Alert
+    <AnimatePresence>
+      {isNotify || isRecharge ? (
+        <motion.div {...cardEnter} className="absolute left-1/2 top-14 z-40 w-[min(440px,calc(100%-2rem))] -translate-x-1/2">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-[#161002]/94 backdrop-blur-md">
+            <div className={`absolute inset-x-0 top-0 h-[3px] ${isRecharge ? "bg-gradient-to-r from-emerald-500 via-emerald-300 to-emerald-500" : "bg-gradient-to-r from-amber-500 via-amber-300 to-amber-500"}`} />
+            <div className="px-5 py-3 text-center">
+              {isNotify ? (
+                <>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">
+                    Chain reaction guard
+                  </div>
+                  <div className="mt-1.5 text-sm font-bold text-white">
+                    Low balance detected. Auto recharging ₹200 via UPI.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300">
+                    Recharge complete
+                  </div>
+                  <div className="mt-1.5 text-sm font-bold text-emerald-200">
+                    ₹200 added, balance ₹245, clear passage ahead.
+                  </div>
+                </>
+              )}
             </div>
-            <div className="mt-1 text-sm font-bold text-white">Low balance · Auto-recharging ₹200 via UPI</div>
-          </>
-        )}
-        {hud.phase === "recharging" && (
-          <>
-            <div className="text-xs font-extrabold uppercase tracking-wider text-green-400">Recharge Complete</div>
-            <div className="mt-1 text-sm font-bold text-green-400">✓ ₹200 added · Balance ₹245 · Clear passage</div>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
 // ApprovedOverlay
 function ApprovedOverlay({ hud }: { hud: GameHud }) {
-  if (hud.phase !== "approved") return null;
   return (
-    <div className="absolute left-1/2 top-14 z-40 -translate-x-1/2">
-      <div className="rounded-xl border-2 border-green-500/50 bg-green-950/92 px-6 py-2.5 text-center backdrop-blur-md">
-        <div className="text-lg font-extrabold text-green-400">✓ FASTag APPROVED — Boom opening</div>
+    <AnimatePresence>
+      {hud.phase === "approved" ? (
+        <motion.div {...cardEnter} className="absolute left-1/2 top-14 z-40 -translate-x-1/2">
+          <div className="flex items-center gap-3 rounded-full border border-emerald-400/50 bg-emerald-950/94 px-5 py-2 backdrop-blur-md">
+            <span className="size-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]" />
+            <span className="font-mono text-sm font-bold tracking-wide text-emerald-200">
+              FASTag approved, boom opening
+            </span>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+// Speedometer
+function Speedometer({ hud }: { hud: GameHud }) {
+  const speed = Math.round(hud.playerSpeed);
+  const stopped = speed < 2;
+  return (
+    <div className="absolute bottom-7 left-1/2 z-30 -translate-x-1/2 text-center">
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">Speed</div>
+      <div className="flex items-baseline justify-center gap-1">
+        <span
+          className={`font-display tabular-nums drop-shadow-[0_2px_14px_rgba(0,0,0,0.65)] ${
+            stopped ? "text-rose-300" : "text-white"
+          }`}
+          style={{ fontSize: "56px", fontWeight: 800, lineHeight: 1 }}
+        >
+          {speed}
+        </span>
+        <span className="font-mono text-xs font-semibold tracking-wider text-white/40">km/h</span>
       </div>
     </div>
   );
@@ -270,7 +353,7 @@ function Minimap({ frameData }: { frameData: React.RefObject<GameFrameData> }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    const S = 130;
+    const S = 148;
 
     const timer = setInterval(() => {
       if (!frameData.current) return;
@@ -279,54 +362,69 @@ function Minimap({ frameData }: { frameData: React.RefObject<GameFrameData> }) {
 
       ctx.save();
       ctx.beginPath();
-      ctx.arc(65, 65, 63, 0, Math.PI * 2);
+      ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2);
       ctx.clip();
 
-      ctx.fillStyle = "#152a1e";
+      const g = ctx.createRadialGradient(S / 2, S / 2, 8, S / 2, S / 2, S / 2);
+      g.addColorStop(0, "#1b2a22");
+      g.addColorStop(1, "#0c1310");
+      ctx.fillStyle = g;
       ctx.fillRect(0, 0, S, S);
 
-      ctx.fillStyle = "#2d3340";
-      ctx.fillRect(48, 0, 34, S);
+      // Road body
+      ctx.fillStyle = "#2a313b";
+      ctx.fillRect(S / 2 - 22, 0, 44, S);
+
+      // Lane separators
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      for (let y = 0; y < S; y += 7) ctx.fillRect(S / 2 - 7.5, y, 1, 3.5);
+      for (let y = 0; y < S; y += 7) ctx.fillRect(S / 2 + 6.5, y, 1, 3.5);
 
       for (const car of cars) {
         if (car.isPlayer) continue;
         const dy = ((car.z - playerZ) / 2000) * S;
-        const cy = 65 - dy;
-        if (cy < 0 || cy > S) continue;
-        const cx = 65 + (car.x / LANE_WIDTH) * 10;
-        ctx.fillStyle = car.speed > 2 ? "#06A77D" : car.speed > 0 ? "#F4A261" : "#E63946";
+        const cy = S / 2 - dy;
+        if (cy < -4 || cy > S + 4) continue;
+        const cx = S / 2 + (car.x / LANE_WIDTH) * 10;
+        ctx.fillStyle = car.speed > 2 ? "#34d399" : car.speed > 0 ? "#fbbf24" : "#f87171";
         ctx.beginPath();
-        ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
         ctx.fill();
       }
 
       const tollDy = ((TOLL_Z_LOCAL - playerZ) / 2000) * S;
-      const tollCy = 65 - tollDy;
-      if (tollCy > 0 && tollCy < S) {
-        ctx.fillStyle = "rgba(230,57,70,0.5)";
-        ctx.fillRect(38, tollCy - 1, 54, 2);
+      const tollCy = S / 2 - tollDy;
+      if (tollCy > -4 && tollCy < S + 4) {
+        ctx.fillStyle = "rgba(248,113,113,0.55)";
+        ctx.fillRect(S / 2 - 26, tollCy - 1.5, 52, 3);
+        ctx.fillStyle = "#fca5a5";
+        ctx.font = "bold 8px ui-monospace, monospace";
+        ctx.fillText("TOLL", S / 2 - 11, tollCy - 4);
       }
 
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = "#e2e8f0";
       ctx.beginPath();
-      ctx.moveTo(65, 61);
-      ctx.lineTo(62, 69);
-      ctx.lineTo(68, 69);
+      ctx.moveTo(S / 2, S / 2 - 5);
+      ctx.lineTo(S / 2 - 4, S / 2 + 4);
+      ctx.lineTo(S / 2 + 4, S / 2 + 4);
       ctx.fill();
 
       ctx.restore();
-    }, 80);
+
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, S / 2 - 1, 0, Math.PI * 2);
+      ctx.stroke();
+    }, 70);
 
     return () => clearInterval(timer);
   }, [frameData]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={130}
-      height={130}
-      className="absolute bottom-6 left-5 z-30 rounded-full border border-white/8 shadow-[0_0_30px_rgba(0,0,0,0.6)]"
-    />
+    <div className="absolute bottom-6 left-5 z-30 rounded-full p-[1.5px] bg-gradient-to-br from-white/20 via-white/5 to-transparent shadow-[0_10px_40px_-12px_rgba(0,0,0,0.7)]">
+      <canvas ref={canvasRef} width={148} height={148} className="block rounded-full" />
+    </div>
   );
 }
 
@@ -369,7 +467,7 @@ function PhoneOverlay({ hud }: { hud: GameHud }) {
           <div className="absolute bottom-3 left-2.5 right-2.5 rounded-[18px] border border-highway/5 bg-white/95 p-3 shadow-[0_10px_26px_-16px_rgba(15,23,42,0.28)] backdrop-blur-md">
             <div className="mb-2 flex items-start justify-between gap-2">
               <div>
-                <div className="text-[9px] font-bold uppercase tracking-[0.1em] text-highway-2/70">Currently Driving</div>
+                <div className="text-[9px] font-bold uppercase tracking-[0.1em] text-highway-2/70">Currently driving</div>
                 <div className="font-display mt-0.5 text-xs font-extrabold text-highway">{VEHICLE.route}</div>
               </div>
               <div className="text-right">
@@ -382,12 +480,14 @@ function PhoneOverlay({ hud }: { hud: GameHud }) {
             <div className="my-2 h-px bg-highway/10" />
             <div className="flex items-end justify-between gap-2">
               <div>
-                <div className="text-[9px] font-bold uppercase tracking-[0.1em] text-highway-2/70">FASTag Balance</div>
+                <div className="text-[9px] font-bold uppercase tracking-[0.1em] text-highway-2/70">FASTag balance</div>
                 <div className={`font-mono-data mt-0.5 text-xl font-extrabold tabular-nums ${balance < 100 ? "text-danger" : "text-success"}`}>₹{balance}</div>
               </div>
               <div className="text-right">
-                <div className="text-[9px] font-bold uppercase tracking-[0.1em] text-highway-2/70">Next Toll</div>
-                <div className="mt-0.5 text-xs font-bold text-highway">{VEHICLE.toll} · <span className="font-mono-data">{distance}</span></div>
+                <div className="text-[9px] font-bold uppercase tracking-[0.1em] text-highway-2/70">Next toll</div>
+                <div className="mt-0.5 text-xs font-bold text-highway">
+                  {VEHICLE.toll}, <span className="font-mono-data">{distance}</span>
+                </div>
               </div>
             </div>
             <div className="mt-2 flex items-center gap-1.5">
@@ -395,10 +495,14 @@ function PhoneOverlay({ hud }: { hud: GameHud }) {
               <div className="text-[10px] font-semibold text-highway-2/70">{status}</div>
             </div>
             {hud.blocked && !hud.withApp ? (
-              <div className="mt-2 rounded-lg bg-danger px-2 py-1.5 text-center text-[10px] font-extrabold text-white">FASTag declined · boom closed</div>
+              <div className="mt-2 rounded-lg bg-danger px-2 py-1.5 text-center text-[10px] font-extrabold text-white">
+                FASTag declined, boom closed
+              </div>
             ) : null}
             {paid ? (
-              <div className="mt-2 rounded-lg bg-success px-2 py-1.5 text-center text-[10px] font-extrabold text-white">TAG READ · ₹{VEHICLE.tollFee} debited</div>
+              <div className="mt-2 rounded-lg bg-success px-2 py-1.5 text-center text-[10px] font-extrabold text-white">
+                Tag read, ₹{VEHICLE.tollFee} debited
+              </div>
             ) : null}
           </div>
         </div>

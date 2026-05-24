@@ -2,7 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { FastForward, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, FastForward, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { DEMO_TOTAL_SECONDS, SCENE_LABELS, VEHICLE } from "@/lib/demo/constants";
 import { formatTime } from "@/lib/demo/utils";
 import { useDemoAudio } from "@/hooks/use-demo-audio";
@@ -76,6 +77,13 @@ export function DemoPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
+          <Link
+            href="/"
+            className="flex size-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.06] text-canvas backdrop-blur-md transition-transform hover:bg-white/10 active:scale-[0.96]"
+            aria-label="Back to landing"
+          >
+            <ArrowLeft className="size-4" strokeWidth={2.5} />
+          </Link>
           <AppLogo size={52} />
           <div>
             <h1 className="font-display text-balance text-xl font-extrabold text-canvas md:text-2xl">

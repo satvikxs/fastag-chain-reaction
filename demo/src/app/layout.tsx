@@ -21,9 +21,9 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FASTag Chain Reaction · Interactive Demo",
+  title: "FASTag Chain Reaction — Stop toll-plaza jams before they form",
   description:
-    "Stop the wave before it starts. Interactive A/B demo of geofenced FASTag readiness on NH-44 Srinagar–Jammu.",
+    "Geofenced FASTag pre-warnings on NH-44 Srinagar–Jammu. Catch balance failures 5 km before the toll plaza — interactive 3D sim and phone A/B demo.",
   icons: { icon: "/logo-mark.svg" },
 };
 
@@ -34,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${plusJakarta.variable} ${inter.variable} ${jetbrains.variable} h-full`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full bg-white">{children}</body>
     </html>
   );
 }

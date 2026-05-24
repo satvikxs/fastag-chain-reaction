@@ -191,6 +191,87 @@ function stepLane(lane: LaneEngine, timeStep: number, rng: () => number, roadEnd
   return passed;
 }
 
+// attemptLaneChanges
+// Stuck non-player cars try to hop to an adjacent lane if there is room.
+// This produces visible lane-switching during the chain reaction: drivers in
+// the stalled middle lane peel off to lanes 0 and 2 to escape the jam.
+function attemptLaneChanges(engine: SimEngine, rng: () => number): void {
+  const LC = engine.lanes.length;
+  const playerId = engine.playerId;
+  const moves: Array<{ from: number; to: number; idx: number }> = [];
+
+  for (let l = 0; l < LC; l++) {
+    const lane = engine.lanes[l]!;
+    for (let i = 0; i < lane.positions.length; i++) {
+      if (lane.ids[i] === playerId) continue;
+      const pos = lane.positions[i]!;
+      // Only consider cars in the approach zone — outside that, lane changes
+      // don't affect the chain-reaction visualization.
+      if (pos < TOLL_CELL - 80 || pos >= TOLL_CELL) continue;
+
+      const gapAhead = i < lane.positions.length - 1
+        ? lane.positions[i + 1]! - pos - 1
+        : 999;
+      const v = lane.velocities[i]!;
+      const stuck = (gapAhead < 3 && v <= 1) || (gapAhead < 2);
+      if (!stuck) continue;
+      if (rng() > 0.18) continue;
+
+      // Score adjacent lanes by available room around this position.
+      const candidates: number[] = [];
+      if (l > 0) candidates.push(l - 1);
+      if (l < LC - 1) candidates.push(l + 1);
+
+      let bestLane = -1;
+      let bestRoom = 2;
+      for (const tl of candidates) {
+        const target = engine.lanes[tl]!;
+        let frontGap = 999;
+        let backGap = 999;
+        for (let j = 0; j < target.positions.length; j++) {
+          const tp = target.positions[j]!;
+          if (tp === pos) { frontGap = -1; break; }
+          if (tp > pos && tp - pos < frontGap) frontGap = tp - pos;
+          if (tp < pos && pos - tp < backGap) backGap = pos - tp;
+        }
+        if (frontGap < 3 || backGap < 3) continue;
+        const room = Math.min(frontGap, backGap);
+        if (room > bestRoom) {
+          bestRoom = room;
+          bestLane = tl;
+        }
+      }
+
+      if (bestLane >= 0) {
+        moves.push({ from: l, to: bestLane, idx: i });
+      }
+    }
+  }
+
+  // Apply highest-index moves per lane first so splice doesn't shift indices.
+  moves.sort((a, b) => (a.from === b.from ? b.idx - a.idx : a.from - b.from));
+
+  for (const m of moves) {
+    const src = engine.lanes[m.from]!;
+    if (m.idx >= src.positions.length) continue;
+    const pos = src.positions[m.idx]!;
+    const vel = src.velocities[m.idx]!;
+    const id = src.ids[m.idx]!;
+    src.positions.splice(m.idx, 1);
+    src.velocities.splice(m.idx, 1);
+    src.ids.splice(m.idx, 1);
+
+    const tgt = engine.lanes[m.to]!;
+    let insertAt = tgt.positions.length;
+    for (let j = 0; j < tgt.positions.length; j++) {
+      if (tgt.positions[j]! > pos) { insertAt = j; break; }
+    }
+    tgt.positions.splice(insertAt, 0, pos);
+    tgt.velocities.splice(insertAt, 0, vel);
+    tgt.ids.splice(insertAt, 0, id);
+  }
+}
+
 // stepSim
 export function stepSim(engine: SimEngine, rng: () => number): SimSnapshot {
   if (engine.withApp && !engine.geofenceTriggered) {
@@ -209,6 +290,8 @@ export function stepSim(engine: SimEngine, rng: () => number): SimSnapshot {
     }
     passed += stepLane(lane, engine.timeStep, rng, engine.roadEnd, maxVelocity);
   }
+
+  attemptLaneChanges(engine, rng);
 
   engine.timeStep += 1;
   engine.carsThrough += passed;
