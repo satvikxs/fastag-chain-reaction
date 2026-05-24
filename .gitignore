@@ -1,0 +1,36 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node (just in case)
+node_modules/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Sed backup files from rebrands
+*.bak
+
+# Local DB (regenerates from seed)
+backend/fastag.db
+backend/*.db
+
+# Playwright intermediate
+*.webm
+video/**/videos/
+
+# Test artifacts
+test_*.png
+*_test_frame.png

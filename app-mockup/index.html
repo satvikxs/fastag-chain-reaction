@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FASTag Chain Reaction — Driver App</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        },
+        colors: {
+          highway: '#0B2545',
+          highway2: '#13315C',
+          alert: '#F4A261',
+          alertRed: '#E63946',
+          success: '#06A77D',
+          ink: '#0F172A',
+        },
+        boxShadow: {
+          phone: '0 30px 60px -15px rgba(11,37,69,0.35), 0 10px 25px -10px rgba(11,37,69,0.2)',
+          card: '0 8px 24px -8px rgba(15,23,42,0.12)',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  body {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% 0%, rgba(244,162,97,0.10), transparent 60%),
+      radial-gradient(1000px 500px at 100% 100%, rgba(6,167,125,0.10), transparent 60%),
+      linear-gradient(180deg, #F6F8FB 0%, #EDF1F7 100%);
+    min-height: 100vh;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 320px;
+    height: 670px;
+    border-radius: 46px;
+    background: #0B0E14;
+    padding: 12px;
+    position: relative;
+    box-shadow:
+      0 30px 60px -15px rgba(11,37,69,0.45),
+      0 10px 25px -10px rgba(11,37,69,0.25),
+      inset 0 0 0 2px rgba(255,255,255,0.04);
+  }
+  .phone::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 40px;
+    border: 1px solid rgba(255,255,255,0.06);
+    pointer-events: none;
+  }
+  .phone-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 34px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 28px;
+    background: #0B0E14;
+    border-radius: 20px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .notch .cam {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #1a1f2b;
+    box-shadow: inset 0 0 0 1px #2a3142;
+  }
+  .notch .speaker {
+    width: 40px; height: 5px; border-radius: 4px; background: #1a1f2b;
+  }
+  .status-bar {
+    position: relative;
+    z-index: 20;
+    height: 44px;
+    padding: 0 22px 0 22px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--statusColor, #0F172A);
+    padding-bottom: 6px;
+  }
+  .status-bar .right { display: flex; align-items: center; gap: 6px; }
+  .status-bar svg { display: inline-block; }
+
+  /* Map for screen 1 */
+  .map-bg {
+    background:
+      linear-gradient(180deg, #DCE7F2 0%, #C9D9EC 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .map-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(11,37,69,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(11,37,69,0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: 0.5;
+  }
+
+  /* Road */
+  .road {
+    position: absolute;
+    height: 22px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow:
+      0 0 0 1px rgba(11,37,69,0.08),
+      0 6px 16px -8px rgba(11,37,69,0.25);
+  }
+  .road .dash {
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    height: 2px;
+    transform: translateY(-50%);
+    background-image: linear-gradient(90deg, #F4A261 0 12px, transparent 12px 22px);
+    background-size: 22px 2px;
+    background-repeat: repeat-x;
+    opacity: 0.85;
+  }
+  .road-thin {
+    position: absolute;
+    height: 8px;
+    background: #ffffffcc;
+    border-radius: 8px;
+  }
+  .water {
+    position: absolute;
+    background: linear-gradient(135deg, #A8C4E0 0%, #93B6D9 100%);
+    border-radius: 60% 40% 50% 50% / 50% 60% 40% 50%;
+    opacity: 0.7;
+  }
+  .park {
+    position: absolute;
+    background: radial-gradient(circle at 40% 40%, #B8D8B8, #9CC79C 70%, #82B582 100%);
+    border-radius: 40% 60% 55% 45% / 50% 55% 45% 50%;
+    opacity: 0.65;
+  }
+
+  /* Pulse */
+  @keyframes pulse-ring {
+    0% { transform: scale(0.6); opacity: 0.8; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+  .pulse::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    animation: pulse-ring 1.8s ease-out infinite;
+  }
+  @keyframes soft-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(230,57,70,0.55); }
+    50% { box-shadow: 0 0 0 14px rgba(230,57,70,0); }
+  }
+  .alert-pulse { animation: soft-pulse 1.6s ease-out infinite; }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.25);
+    border-top-color: #fff;
+    animation: spin 0.9s linear infinite;
+  }
+
+  /* Subtle confetti for confirmation */
+  .confetti {
+    position: absolute;
+    width: 8px; height: 14px; border-radius: 2px;
+    opacity: 0.9;
+  }
+
+  /* Glow for toll icon */
+  .glow {
+    box-shadow:
+      0 0 0 4px rgba(230,57,70,0.18),
+      0 0 24px 6px rgba(230,57,70,0.45);
+  }
+
+  /* Scrollbar polish for horizontal phone row */
+  .phones-row::-webkit-scrollbar { height: 10px; }
+  .phones-row::-webkit-scrollbar-thumb { background: rgba(11,37,69,0.25); border-radius: 8px; }
+  .phones-row::-webkit-scrollbar-track { background: transparent; }
+
+  .label-chip {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body class="text-ink">
+
+<!-- HEADER -->
+<header class="max-w-7xl mx-auto px-6 pt-12 pb-8">
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-highway flex items-center justify-center shadow-card">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+          <path d="M3 12h4l3-8 4 16 3-8h4"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-highway">FASTag Chain Reaction <span class="text-alert">— Driver App</span></h1>
+        <p class="text-sm md:text-base text-slate-600 mt-1">Warn drivers 5 km before a toll. Prevent the jam that cascades for hundreds of cars behind them.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="label-chip text-highway/70">Hackathon Demo</span>
+      <span class="w-1.5 h-1.5 rounded-full bg-highway/30"></span>
+      <span class="label-chip text-highway/70">India · NH-44</span>
+    </div>
+  </div>
+</header>
+
+<!-- PHONES ROW -->
+<section class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="phones-row overflow-x-auto pb-6">
+    <div class="flex gap-8 min-w-max justify-center mx-auto">
+
+      <!-- ============================================================= -->
+      <!-- SCREEN 1 — DRIVING (IDLE) -->
+      <!-- ============================================================= -->
+      <div class="flex flex-col items-center">
+        <div class="phone">
+          <div class="notch"><div class="cam"></div><div class="speaker"></div><div class="cam"></div></div>
+          <div class="phone-screen" style="--statusColor:#0F172A;">
+            <!-- Status bar -->
+            <div class="status-bar">
+              <span>9:41</span>
+              <span class="right">
+                <!-- signal -->
+                <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#0F172A"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#0F172A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#0F172A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#0F172A" opacity=".5"/></svg>
+                <!-- wifi -->
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 11.5a1 1 0 100-2 1 1 0 000 2zm-4-4a5.66 5.66 0 018 0l1.4-1.4a7.66 7.66 0 00-10.8 0L4 7.5zm-2.8-2.8A9.66 9.66 0 0114.8 4.7l1.4-1.4A11.66 11.66 0 00-.2 3.3l1.4 1.4z" fill="#0F172A"/></svg>
+                <!-- battery -->
+                <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#0F172A" opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="2" fill="#0F172A"/><rect x="23.5" y="3.5" width="2" height="5" rx="1" fill="#0F172A" opacity=".5"/></svg>
+              </span>
+            </div>
+
+            <!-- App top mini bar -->
+            <div class="px-4 pt-1 pb-2 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-highway flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+                </div>
+                <span class="text-[13px] font-bold text-highway">FASTag</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                <span class="text-[11px] font-semibold text-slate-500">Live</span>
+              </div>
+            </div>
+
+            <!-- MAP -->
+            <div class="map-bg absolute left-0 right-0" style="top:88px; bottom:230px;">
+              <!-- Water blob -->
+              <div class="water" style="width:120px; height:80px; left:-30px; top:30px;"></div>
+              <!-- Park -->
+              <div class="park" style="width:90px; height:70px; right:-20px; bottom:20px;"></div>
+              <div class="park" style="width:60px; height:50px; left:30px; bottom:80px;"></div>
+
+              <!-- Road network -->
+              <div class="road-thin" style="left:20px; right:20px; top:38px; transform:rotate(-6deg);"></div>
+              <div class="road-thin" style="left:10px; right:30px; bottom:30px; transform:rotate(4deg);"></div>
+              <!-- Main highway with route -->
+              <div class="road" style="left:18px; right:18px; top:50%; transform: translateY(-50%) rotate(-3deg);">
+                <div class="dash"></div>
+              </div>
+
+              <!-- Car (current location) -->
+              <div class="absolute" style="left:48px; top:50%; transform:translateY(-50%);">
+                <div class="relative w-7 h-7 rounded-full bg-highway flex items-center justify-center text-success pulse">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#06A77D" stroke="none" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="6"/></svg>
+                </div>
+                <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-white px-2 py-0.5 rounded-md text-[10px] font-bold text-highway shadow-card whitespace-nowrap">YOU</div>
+              </div>
+
+              <!-- Toll plaza icon -->
+              <div class="absolute" style="right:36px; top:50%; transform:translateY(-50%);">
+                <div class="w-9 h-9 rounded-xl bg-white shadow-card flex items-center justify-center border border-slate-200">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                    <path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/><path d="M3 13h18"/>
+                  </svg>
+                </div>
+                <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-highway text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow-card whitespace-nowrap">KHALAPUR</div>
+              </div>
+
+              <!-- distance chip -->
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full shadow-card flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span class="text-[11px] font-bold text-highway">5.2 km</span>
+                <span class="text-[11px] text-slate-500">to toll</span>
+              </div>
+
+              <!-- compass -->
+              <div class="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center">
+                <span class="text-[10px] font-bold text-alertRed">N</span>
+              </div>
+            </div>
+
+            <!-- BOTTOM CARD -->
+            <div class="absolute left-3 right-3 bottom-3 bg-white rounded-3xl shadow-card border border-slate-100 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">CURRENT SPEED</div>
+                  <div class="flex items-baseline gap-1">
+                    <span class="text-2xl font-extrabold text-highway">82</span>
+                    <span class="text-[11px] font-semibold text-slate-500">km/h</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">ROUTE</div>
+                  <div class="text-[12px] font-bold text-highway">Mumbai → Pune</div>
+                  <div class="text-[10px] text-slate-500">NH-44 · Expressway</div>
+                </div>
+              </div>
+
+              <div class="h-px bg-slate-100 my-2"></div>
+
+              <!-- Balance row -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-highway/5 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-[10px] font-bold tracking-wider text-slate-400">FASTAG BALANCE</div>
+                    <div class="text-lg font-extrabold text-highway">₹47<span class="text-xs font-semibold text-slate-400">.00</span></div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">NEXT TOLL</div>
+                  <div class="text-[12px] font-bold text-highway">Lakhanpur</div>
+                  <div class="text-[10px] text-slate-500">5.2 km ahead</div>
+                </div>
+              </div>
+
+              <!-- Upcoming tolls strip -->
+              <div class="mt-3 flex items-center gap-2 overflow-hidden">
+                <span class="text-[9px] font-bold tracking-wider text-slate-400">UPCOMING</span>
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600">Lakhanpur · 5km</span>
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600">Talegaon · 41km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-5 text-center">
+          <div class="label-chip text-highway/60">Screen 01</div>
+          <div class="text-base font-bold text-highway mt-1">Driving · Idle</div>
+          <div class="text-xs text-slate-500 max-w-[240px] mx-auto mt-1">Live map, balance, and the next toll always visible.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- SCREEN 2 — ALERT TRIGGERED -->
+      <!-- ============================================================= -->
+      <div class="flex flex-col items-center">
+        <div class="phone">
+          <div class="notch"><div class="cam"></div><div class="speaker"></div><div class="cam"></div></div>
+          <div class="phone-screen" style="--statusColor:#0F172A;">
+            <!-- Status bar -->
+            <div class="status-bar">
+              <span>9:42</span>
+              <span class="right">
+                <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#0F172A"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#0F172A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#0F172A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#0F172A" opacity=".5"/></svg>
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 11.5a1 1 0 100-2 1 1 0 000 2zm-4-4a5.66 5.66 0 018 0l1.4-1.4a7.66 7.66 0 00-10.8 0L4 7.5zm-2.8-2.8A9.66 9.66 0 0114.8 4.7l1.4-1.4A11.66 11.66 0 00-.2 3.3l1.4 1.4z" fill="#0F172A"/></svg>
+                <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#0F172A" opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="2" fill="#0F172A"/><rect x="23.5" y="3.5" width="2" height="5" rx="1" fill="#0F172A" opacity=".5"/></svg>
+              </span>
+            </div>
+
+            <!-- Alert banner -->
+            <div class="px-3 pt-1">
+              <div class="alert-pulse bg-alertRed text-white rounded-2xl px-3 py-2.5 shadow-card">
+                <div class="flex items-start gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-[11px] font-extrabold tracking-wider opacity-90">LOW FASTAG BALANCE</div>
+                    <div class="text-[12px] font-bold leading-snug">Recharge before Lakhanpur Toll · 4.8 km away</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MAP -->
+            <div class="map-bg absolute left-0 right-0" style="top:128px; bottom:200px;">
+              <div class="water" style="width:120px; height:80px; left:-30px; top:30px;"></div>
+              <div class="park" style="width:90px; height:70px; right:-20px; bottom:20px;"></div>
+              <div class="park" style="width:60px; height:50px; left:30px; bottom:80px;"></div>
+
+              <div class="road-thin" style="left:20px; right:20px; top:38px; transform:rotate(-6deg);"></div>
+              <div class="road-thin" style="left:10px; right:30px; bottom:30px; transform:rotate(4deg);"></div>
+
+              <div class="road" style="left:18px; right:18px; top:50%; transform: translateY(-50%) rotate(-3deg);">
+                <div class="dash"></div>
+              </div>
+
+              <!-- Car -->
+              <div class="absolute" style="left:62px; top:50%; transform:translateY(-50%);">
+                <div class="relative w-7 h-7 rounded-full bg-highway flex items-center justify-center text-success pulse">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#06A77D" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="6"/></svg>
+                </div>
+              </div>
+
+              <!-- Toll plaza icon - glowing -->
+              <div class="absolute" style="right:36px; top:50%; transform:translateY(-50%);">
+                <div class="relative w-11 h-11 rounded-xl bg-white shadow-card flex items-center justify-center border-2 border-alertRed glow text-alertRed">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                    <path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/><path d="M3 13h18"/>
+                  </svg>
+                  <div class="absolute inset-0 rounded-xl pulse text-alertRed"></div>
+                </div>
+                <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-alertRed text-white px-2 py-0.5 rounded-md text-[9px] font-extrabold shadow-card whitespace-nowrap">KHALAPUR</div>
+              </div>
+
+              <!-- ETA chip -->
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 bg-alertRed text-white px-3 py-1.5 rounded-full shadow-card flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="text-[11px] font-extrabold">~3 min to toll</span>
+              </div>
+            </div>
+
+            <!-- BOTTOM CARD with CTA -->
+            <div class="absolute left-3 right-3 bottom-3 bg-white rounded-3xl shadow-card border border-slate-100 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">CURRENT BALANCE</div>
+                  <div class="flex items-baseline gap-1">
+                    <span class="text-2xl font-extrabold text-alertRed">₹47</span>
+                    <span class="text-[11px] font-semibold text-slate-500">(toll: ₹320)</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">SHORTFALL</div>
+                  <div class="text-base font-extrabold text-alertRed">–₹273</div>
+                </div>
+              </div>
+
+              <!-- CTA -->
+              <button class="w-full bg-highway hover:bg-highway2 transition text-white rounded-2xl py-3.5 px-4 flex items-center justify-center gap-2 shadow-card">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span class="font-extrabold text-[14px]">Recharge ₹500 in 1 tap</span>
+              </button>
+              <div class="text-center mt-2">
+                <span class="text-[10px] font-semibold text-slate-400">Powered by Paytm UPI · Auto-fills your saved method</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-5 text-center">
+          <div class="label-chip text-alertRed">Screen 02</div>
+          <div class="text-base font-bold text-highway mt-1">Alert · Low Balance</div>
+          <div class="text-xs text-slate-500 max-w-[240px] mx-auto mt-1">5 km warning gives the driver time to act before the lane.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- SCREEN 3 — RECHARGE SHEET -->
+      <!-- ============================================================= -->
+      <div class="flex flex-col items-center">
+        <div class="phone">
+          <div class="notch"><div class="cam"></div><div class="speaker"></div><div class="cam"></div></div>
+          <div class="phone-screen" style="--statusColor:#FFFFFF; background: #0F172A;">
+            <!-- Dim backdrop "behind" the sheet -->
+            <div class="absolute inset-0 bg-highway/85"></div>
+
+            <!-- Status bar over dim -->
+            <div class="status-bar" style="color:white;">
+              <span>9:42</span>
+              <span class="right">
+                <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="white"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="white"/><rect x="9" y="2" width="3" height="9" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="white" opacity=".5"/></svg>
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 11.5a1 1 0 100-2 1 1 0 000 2zm-4-4a5.66 5.66 0 018 0l1.4-1.4a7.66 7.66 0 00-10.8 0L4 7.5zm-2.8-2.8A9.66 9.66 0 0114.8 4.7l1.4-1.4A11.66 11.66 0 00-.2 3.3l1.4 1.4z" fill="white"/></svg>
+                <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="white" opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="2" fill="white"/><rect x="23.5" y="3.5" width="2" height="5" rx="1" fill="white" opacity=".5"/></svg>
+              </span>
+            </div>
+
+            <!-- Hint of map behind -->
+            <div class="absolute left-4 right-4" style="top:60px;">
+              <div class="text-white/80 text-[11px] font-semibold tracking-wider">QUICK RECHARGE</div>
+              <div class="text-white text-lg font-extrabold mt-0.5">Top up your FASTag</div>
+              <div class="text-white/60 text-[11px] mt-0.5">For toll · Lakhanpur · 4.6 km away</div>
+            </div>
+
+            <!-- BOTTOM SHEET -->
+            <div class="absolute left-0 right-0 bottom-0 bg-white rounded-t-[28px] shadow-2xl pt-3 pb-4 px-4" style="height:74%;">
+              <!-- Grabber -->
+              <div class="w-10 h-1.5 rounded-full bg-slate-200 mx-auto mb-3"></div>
+
+              <!-- Vehicle -->
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-highway flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 17H5a2 2 0 01-2-2V8a2 2 0 012-2h11l5 5v4a2 2 0 01-2 2h-1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">VEHICLE · FASTAG</div>
+                  <div class="text-[13px] font-extrabold text-highway">JK 01 AB 1234 · Tata Sumo</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">BAL</div>
+                  <div class="text-[13px] font-extrabold text-alertRed">₹47</div>
+                </div>
+              </div>
+
+              <!-- Amount selector -->
+              <div class="label-chip text-slate-400 mb-2">SELECT AMOUNT</div>
+              <div class="grid grid-cols-3 gap-2 mb-4">
+                <button class="rounded-2xl border border-slate-200 py-3 px-2 bg-white text-center hover:border-highway transition">
+                  <div class="text-[10px] font-bold text-slate-400">₹</div>
+                  <div class="text-base font-extrabold text-highway">200</div>
+                </button>
+                <button class="rounded-2xl border-2 border-highway py-3 px-2 bg-highway text-center text-white relative shadow-card">
+                  <div class="absolute -top-2 left-1/2 -translate-x-1/2 bg-alert text-highway text-[8px] font-extrabold px-1.5 py-0.5 rounded-full tracking-wider">RECOMMENDED</div>
+                  <div class="text-[10px] font-bold opacity-80">₹</div>
+                  <div class="text-base font-extrabold">500</div>
+                </button>
+                <button class="rounded-2xl border border-slate-200 py-3 px-2 bg-white text-center hover:border-highway transition">
+                  <div class="text-[10px] font-bold text-slate-400">₹</div>
+                  <div class="text-base font-extrabold text-highway">1000</div>
+                </button>
+              </div>
+
+              <!-- UPI options -->
+              <div class="label-chip text-slate-400 mb-2">PAY WITH UPI</div>
+              <div class="space-y-2 mb-4">
+                <!-- Paytm (active - mid-tap) -->
+                <div class="flex items-center gap-3 p-3 rounded-2xl border-2 border-highway bg-highway/[0.03]">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:#00BAF2;">
+                    <span class="text-white text-[11px] font-extrabold">Pay</span>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-[13px] font-extrabold text-highway">Paytm UPI</div>
+                    <div class="text-[10px] text-slate-500">adeeb@paytm · +91 98••• ••231</div>
+                  </div>
+                  <div class="spinner" style="border-top-color:#0B2545; border-color:rgba(11,37,69,0.2); border-top-color:#0B2545;"></div>
+                </div>
+                <!-- GPay -->
+                <div class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:border-highway transition">
+                  <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
+                    <svg viewBox="0 0 48 48" width="22" height="22"><path fill="#4285F4" d="M24 9.5c3.3 0 6.3 1.1 8.7 3.3l6.5-6.5C35.3 2.4 30 0 24 0 14.8 0 6.9 5.2 3 12.8l7.6 5.9C12.5 12.7 17.8 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.5c-.5 2.9-2.2 5.4-4.7 7l7.4 5.7c4.3-4 6.9-9.9 6.9-17z"/><path fill="#FBBC04" d="M10.6 28.7c-.4-1.2-.6-2.5-.6-3.7s.2-2.5.6-3.7L3 15.4C1.1 19 0 23 0 27.4s1.1 8.4 3 12l7.6-5.9z"/><path fill="#EA4335" d="M24 48c6 0 11.1-2 14.8-5.4l-7.4-5.7c-2 1.4-4.6 2.2-7.4 2.2-6.2 0-11.5-3.2-13.4-8.2l-7.6 5.9C6.9 42.8 14.8 48 24 48z"/></svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-[13px] font-extrabold text-highway">Google Pay</div>
+                    <div class="text-[10px] text-slate-500">adeeb@okhdfcbank</div>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+                <!-- PhonePe -->
+                <div class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:border-highway transition">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:#5F259F;">
+                    <span class="text-white text-[14px] font-extrabold italic">Pe</span>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-[13px] font-extrabold text-highway">PhonePe</div>
+                    <div class="text-[10px] text-slate-500">adeeb@ybl</div>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+              </div>
+
+              <!-- Status -->
+              <div class="flex items-center gap-2 p-3 rounded-2xl bg-slate-50">
+                <div class="spinner" style="width:18px;height:18px;border-width:2px;border-color:rgba(11,37,69,0.2);border-top-color:#0B2545;"></div>
+                <div>
+                  <div class="text-[12px] font-extrabold text-highway">Authorizing ₹500…</div>
+                  <div class="text-[10px] text-slate-500">Secure UPI handshake · Don't close the app</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-5 text-center">
+          <div class="label-chip text-highway/60">Screen 03</div>
+          <div class="text-base font-bold text-highway mt-1">Recharge · UPI Sheet</div>
+          <div class="text-xs text-slate-500 max-w-[240px] mx-auto mt-1">One tap on the saved UPI method, done in under 4 seconds.</div>
+        </div>
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- SCREEN 4 — CONFIRMATION -->
+      <!-- ============================================================= -->
+      <div class="flex flex-col items-center">
+        <div class="phone">
+          <div class="notch"><div class="cam"></div><div class="speaker"></div><div class="cam"></div></div>
+          <div class="phone-screen" style="--statusColor:#0F172A; background: linear-gradient(180deg,#F2FBF7 0%, #FFFFFF 55%);">
+            <!-- Status bar -->
+            <div class="status-bar">
+              <span>9:42</span>
+              <span class="right">
+                <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#0F172A"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#0F172A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#0F172A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#0F172A" opacity=".5"/></svg>
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 11.5a1 1 0 100-2 1 1 0 000 2zm-4-4a5.66 5.66 0 018 0l1.4-1.4a7.66 7.66 0 00-10.8 0L4 7.5zm-2.8-2.8A9.66 9.66 0 0114.8 4.7l1.4-1.4A11.66 11.66 0 00-.2 3.3l1.4 1.4z" fill="#0F172A"/></svg>
+                <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="#0F172A" opacity=".5"/><rect x="2" y="2" width="17" height="8" rx="2" fill="#0F172A"/><rect x="23.5" y="3.5" width="2" height="5" rx="1" fill="#0F172A" opacity=".5"/></svg>
+              </span>
+            </div>
+
+            <!-- Confetti -->
+            <div class="confetti" style="left:36px; top:90px; background:#06A77D; transform:rotate(20deg);"></div>
+            <div class="confetti" style="right:48px; top:80px; background:#F4A261; transform:rotate(-15deg);"></div>
+            <div class="confetti" style="left:80px; top:140px; background:#0B2545; transform:rotate(45deg);"></div>
+            <div class="confetti" style="right:30px; top:170px; background:#06A77D; transform:rotate(-30deg);"></div>
+            <div class="confetti" style="left:30px; top:200px; background:#F4A261; transform:rotate(60deg);"></div>
+
+            <!-- Big check -->
+            <div class="flex flex-col items-center mt-6 px-4">
+              <div class="relative">
+                <div class="absolute inset-0 rounded-full bg-success/20 blur-2xl scale-150"></div>
+                <div class="relative w-24 h-24 rounded-full bg-success flex items-center justify-center shadow-card">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="text-center mt-5">
+                <div class="text-[11px] font-extrabold tracking-wider text-success">RECHARGE SUCCESSFUL</div>
+                <div class="text-xl font-extrabold text-highway mt-1.5">Balance ₹547</div>
+                <div class="text-[13px] text-slate-600 mt-1 leading-snug px-2">You're cleared for <span class="font-extrabold text-highway">Lakhanpur Toll</span></div>
+              </div>
+            </div>
+
+            <!-- Lane suggestion -->
+            <div class="mx-3 mt-5 bg-white rounded-2xl border border-slate-100 shadow-card p-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-alert/15 flex items-center justify-center text-alert">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                    <path d="M5 9l4-4 4 4"/><path d="M9 5v14"/><path d="M19 15l-4 4-4-4"/><path d="M15 19V5"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <div class="text-[10px] font-bold tracking-wider text-slate-400">LANE SUGGESTION</div>
+                  <div class="text-[13px] font-extrabold text-highway">Lane 4 · FASTag</div>
+                  <div class="text-[10px] text-slate-500">Shortest queue right now · ~22s wait</div>
+                </div>
+                <div class="text-right">
+                  <div class="px-2 py-1 rounded-lg bg-success/10 text-success text-[10px] font-extrabold">FASTEST</div>
+                </div>
+              </div>
+              <!-- Mini lane diagram -->
+              <div class="mt-3 grid grid-cols-6 gap-1.5">
+                <div class="h-8 rounded-md bg-slate-100 flex flex-col items-center justify-center">
+                  <span class="text-[8px] font-bold text-slate-400">L1</span>
+                  <span class="text-[8px] text-slate-400">cash</span>
+                </div>
+                <div class="h-8 rounded-md bg-slate-100 flex flex-col items-center justify-center">
+                  <span class="text-[8px] font-bold text-slate-400">L2</span>
+                  <span class="text-[8px] text-slate-400">cash</span>
+                </div>
+                <div class="h-8 rounded-md bg-alert/20 flex flex-col items-center justify-center">
+                  <span class="text-[8px] font-bold text-highway">L3</span>
+                  <span class="text-[8px] text-highway/70">tag</span>
+                </div>
+                <div class="h-8 rounded-md bg-success flex flex-col items-center justify-center ring-2 ring-success/30">
+                  <span class="text-[8px] font-extrabold text-white">L4</span>
+                  <span class="text-[8px] font-bold text-white">tag</span>
+                </div>
+                <div class="h-8 rounded-md bg-alert/20 flex flex-col items-center justify-center">
+                  <span class="text-[8px] font-bold text-highway">L5</span>
+                  <span class="text-[8px] text-highway/70">tag</span>
+                </div>
+                <div class="h-8 rounded-md bg-slate-100 flex flex-col items-center justify-center">
+                  <span class="text-[8px] font-bold text-slate-400">L6</span>
+                  <span class="text-[8px] text-slate-400">cash</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Impact stat -->
+            <div class="mx-3 mt-3 rounded-2xl p-3 bg-gradient-to-r from-highway to-highway2 text-white shadow-card">
+              <div class="flex items-start gap-3">
+                <div class="text-2xl leading-none mt-0.5">🚗</div>
+                <div class="flex-1">
+                  <div class="text-[10px] font-extrabold tracking-wider text-alert">CHAIN REACTION PREVENTED</div>
+                  <div class="text-[12px] font-bold mt-1 leading-snug">You just helped prevent a traffic jam for <span class="text-alert">~180 cars</span> behind you.</div>
+                  <div class="flex items-center gap-3 mt-2">
+                    <div class="flex items-center gap-1 text-[10px] text-white/70">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      ~9 min saved
+                    </div>
+                    <div class="flex items-center gap-1 text-[10px] text-white/70">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3"><path d="M2 22l1.5-4.5L17 4l4 4L7.5 21.5 3 23z"/></svg>
+                      14 kg CO₂
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom done bar -->
+            <div class="absolute left-3 right-3 bottom-3">
+              <button class="w-full bg-success text-white rounded-2xl py-3 font-extrabold text-[14px] shadow-card flex items-center justify-center gap-2">
+                Continue driving
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="mt-5 text-center">
+          <div class="label-chip text-success">Screen 04</div>
+          <div class="text-base font-bold text-highway mt-1">Confirmation · Cleared</div>
+          <div class="text-xs text-slate-500 max-w-[240px] mx-auto mt-1">Lane suggestion + the visible network impact close the loop.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER STRIP -->
+<footer class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-5">
+      <div class="label-chip text-alertRed">THE PROBLEM</div>
+      <div class="text-[15px] font-extrabold text-highway mt-1">One low-balance car blocks ~180 behind it</div>
+      <div class="text-xs text-slate-500 mt-1.5">A single stalled FASTag at Lakhanpur creates 9–14 min of cascading delay during peak hours.</div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-5">
+      <div class="label-chip text-alert">THE FIX</div>
+      <div class="text-[15px] font-extrabold text-highway mt-1">5 km warning + 1-tap UPI recharge</div>
+      <div class="text-xs text-slate-500 mt-1.5">App watches NHAI toll geofences. Triggers only when balance &lt; expected toll for vehicle class.</div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-5">
+      <div class="label-chip text-success">THE IMPACT</div>
+      <div class="text-[15px] font-extrabold text-highway mt-1">Network-wide flow improvement</div>
+      <div class="text-xs text-slate-500 mt-1.5">If 1 in 200 drivers uses the app, average toll queue length drops measurably across NH-44.</div>
+    </div>
+  </div>
+
+  <div class="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400">
+    <span>Tolls referenced:</span>
+    <span class="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-semibold text-highway/70">Lakhanpur</span>
+    <span class="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-semibold text-highway/70">Talegaon</span>
+    <span class="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-semibold text-highway/70">Vadape</span>
+    <span class="px-2 py-0.5 rounded-full bg-white border border-slate-200 font-semibold text-highway/70">Dharuhera</span>
+  </div>
+</footer>
+
+</body>
+</html>

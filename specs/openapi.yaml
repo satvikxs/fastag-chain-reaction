@@ -1,0 +1,1446 @@
+openapi: 3.1.0
+info:
+  title: FASTag Chain Reaction API
+  version: 0.1.0
+  summary: Backend API for the FASTag Chain Reaction mobile app and NHAI toll-health dashboard.
+  description: |
+    The FASTag Chain Reaction service powers a driver-facing mobile app and a regulator-facing
+    dashboard for India's electronic toll-collection ecosystem.
+
+    The API covers four broad capability areas:
+
+      * **Authentication** via phone-number one-time-passwords (OTPs).
+      * **Vehicle and FASTag account management** for the logged-in user.
+      * **Real-time location pings** which the backend correlates against toll geofences
+        to surface "approaching toll" events, low-balance warnings, and pre-toll recharge prompts.
+      * **Recharge orchestration** through UPI Intent flows plus a webhook callback from NPCI,
+        and post-toll telemetry collection that feeds the aggregated toll-health dashboard
+        consumed by NHAI staff.
+
+    All authenticated endpoints expect a Bearer token issued by `POST /v1/auth/otp-verify`.
+    Rate limiting is applied per-token (or per-IP for the unauthenticated OTP endpoints) and is
+    surfaced via standard `X-RateLimit-*` response headers documented under each endpoint.
+  contact:
+    name: FASTag Chain Reaction Engineering
+    email: engineering@fastag-chain-reaction.example
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://api.fastag-chain-reaction.example/v1
+    description: Production
+  - url: https://staging.api.fastag-chain-reaction.example/v1
+    description: Staging
+  - url: http://localhost:8080/v1
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Phone-OTP authentication flows.
+  - name: Users
+    description: Manage the profile of the currently authenticated user.
+  - name: Vehicles
+    description: CRUD operations over the user's registered vehicles and linked FASTags.
+  - name: Location
+    description: High-frequency location ingestion and geofence-trigger fan-out.
+  - name: FASTag
+    description: Look up FASTag balance, status, and blacklist state for a vehicle.
+  - name: Recharge
+    description: UPI-Intent recharge orchestration and the NPCI settlement webhook.
+  - name: Telemetry
+    description: Post-toll user-reported experience telemetry.
+  - name: Tolls
+    description: Toll plaza discovery and aggregated health metrics.
+
+security:
+  - BearerAuth: []
+
+paths:
+
+  /auth/otp-request:
+    post:
+      tags: [Auth]
+      summary: Request a one-time password
+      description: |
+        Sends a 6-digit OTP to the supplied Indian mobile number via SMS. The OTP is valid
+        for five minutes and may be retried at most three times. This endpoint is unauthenticated
+        but is aggressively rate-limited per source IP to deter SMS-pumping abuse.
+      operationId: requestOtp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+            example:
+              phone: "+919876543210"
+      responses:
+        '202':
+          description: OTP dispatched. The response does not reveal whether the number is registered.
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestAccepted'
+              example:
+                request_id: "01HV5KZ8K2H8M3W6QF8P3Z2X9T"
+                expires_in_seconds: 300
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/otp-verify:
+    post:
+      tags: [Auth]
+      summary: Verify a one-time password and obtain a bearer token
+      description: |
+        Verifies the OTP delivered to the user's phone and returns a signed bearer token that
+        must be presented on every subsequent authenticated request. If the phone number does
+        not yet exist as a user, a fresh user record is created on first successful verification.
+      operationId: verifyOtp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerify'
+            example:
+              request_id: "01HV5KZ8K2H8M3W6QF8P3Z2X9T"
+              phone: "+919876543210"
+              code: "428193"
+      responses:
+        '200':
+          description: OTP correct. Returns the bearer token and user identity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+              example:
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMUhWNUtaOEsySDhNM1c2UUY4UDNaMlg5VCJ9.dQw4w9WgXcQ"
+                token_type: "Bearer"
+                expires_in_seconds: 2592000
+                user:
+                  id: "01HV5KZ8K2H8M3W6QF8P3Z2X9T"
+                  phone: "+919876543210"
+                  display_name: null
+                  created_at: "2026-05-24T08:31:42Z"
+                  is_new_user: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: OTP incorrect, expired, or already consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "otp_invalid"
+                  message: "The OTP you entered is incorrect or has expired."
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get the authenticated user's profile
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: The profile of the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: "01HV5KZ8K2H8M3W6QF8P3Z2X9T"
+                phone: "+919876543210"
+                display_name: "Priya R."
+                email: "priya@example.in"
+                preferred_language: "en-IN"
+                created_at: "2026-05-24T08:31:42Z"
+                is_new_user: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+    patch:
+      tags: [Users]
+      summary: Update the authenticated user's profile
+      description: Only mutable fields are accepted. The user's phone number cannot be changed here.
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+            example:
+              display_name: "Priya Ramaswamy"
+              email: "priya.r@example.in"
+              preferred_language: "en-IN"
+      responses:
+        '200':
+          description: Profile updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /vehicles:
+    post:
+      tags: [Vehicles]
+      summary: Register a vehicle and link its FASTag
+      description: |
+        Creates a vehicle for the authenticated user. The backend will attempt to discover the
+        linked FASTag via the issuing bank's directory lookup; if discovery fails the vehicle
+        is still created and the FASTag fields remain null until reconciliation succeeds.
+      operationId: createVehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleCreate'
+            example:
+              registration_number: "KA01AB1234"
+              make: "Maruti Suzuki"
+              model: "Swift"
+              vehicle_class: "VC4"
+              fuel_type: "petrol"
+              color: "Pearl White"
+      responses:
+        '201':
+          description: Vehicle created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: A vehicle with this registration number is already registered to a user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "vehicle_conflict"
+                  message: "Vehicle KA01AB1234 is already registered."
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      tags: [Vehicles]
+      summary: List the authenticated user's vehicles
+      operationId: listVehicles
+      parameters:
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Paginated list of vehicles owned by the user.
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleList'
+              example:
+                items:
+                  - id: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+                    registration_number: "KA01AB1234"
+                    make: "Maruti Suzuki"
+                    model: "Swift"
+                    vehicle_class: "VC4"
+                    fuel_type: "petrol"
+                    color: "Pearl White"
+                    fastag_serial: "608216-0011223344"
+                    fastag_bank: "ICICI"
+                    created_at: "2026-05-24T08:35:12Z"
+                page:
+                  next_cursor: null
+                  page_size: 20
+                  total_estimate: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /vehicles/{id}:
+    delete:
+      tags: [Vehicles]
+      summary: Remove a vehicle from the user's account
+      description: Unlinks the FASTag association on this user; the FASTag itself is not deactivated.
+      operationId: deleteVehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The vehicle ID to delete.
+          schema:
+            type: string
+            example: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+      responses:
+        '204':
+          description: Vehicle deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /location-ping:
+    post:
+      tags: [Location]
+      summary: Submit a high-frequency location ping
+      description: |
+        Accepts a single GPS sample from the mobile client (typically posted once every
+        5-15 seconds while the app is in the foreground or while a trip is active). The server
+        correlates the ping against toll geofences and returns any triggered events so the client
+        can surface in-app notifications (e.g. "Toll ahead in 1.2 km - balance ₹84").
+
+        This endpoint is engineered for very high request volume; clients SHOULD batch retries
+        rather than aggressively retry on transient failure.
+      operationId: postLocationPing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationPing'
+            example:
+              vehicle_id: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+              lat: 12.971599
+              lon: 77.594566
+              speed_kmph: 64.5
+              heading_degrees: 215.0
+              accuracy_meters: 8.0
+              recorded_at: "2026-05-24T08:42:11Z"
+      responses:
+        '200':
+          description: Ping accepted; any matching geofence triggers are returned.
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationPingResponse'
+              example:
+                accepted: true
+                triggers:
+                  - id: "01HV5M1ZZG0E0Z0Z0Z0Z0Z0Z0Z"
+                    event_type: "approaching_toll"
+                    toll_plaza_id: "TP-NH48-ELC-014"
+                    toll_plaza_name: "Electronic City Toll Plaza"
+                    distance_meters: 1230
+                    eta_seconds: 65
+                    recommended_action: "prompt_recharge"
+                    occurred_at: "2026-05-24T08:42:11Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /fastag-status/{vehicle_reg}:
+    get:
+      tags: [FASTag]
+      summary: Get the current FASTag status for a vehicle
+      description: |
+        Returns the latest known FASTag account state for the supplied vehicle registration
+        number. The data is cached for up to 60 seconds; clients can force a fresh fetch by
+        passing `?fresh=true` though this is rate-limited more aggressively.
+      operationId: getFastagStatus
+      parameters:
+        - name: vehicle_reg
+          in: path
+          required: true
+          description: Vehicle registration number, e.g. `KA01AB1234`. Case-insensitive.
+          schema:
+            type: string
+            example: "KA01AB1234"
+        - name: fresh
+          in: query
+          required: false
+          description: If true, bypass the read-through cache and hit the issuing bank directly.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Current FASTag status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FastagStatus'
+              example:
+                vehicle_registration: "KA01AB1234"
+                fastag_serial: "608216-0011223344"
+                issuing_bank: "ICICI"
+                balance_inr: "84.50"
+                status: "active"
+                blacklisted: false
+                last_synced_at: "2026-05-24T08:41:50Z"
+                low_balance_threshold_inr: "150.00"
+                low_balance: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /recharge:
+    post:
+      tags: [Recharge]
+      summary: Initiate a FASTag recharge via UPI Intent
+      description: |
+        Creates a pending recharge transaction and returns a UPI Intent deep-link that the
+        client opens to hand off to the user's UPI app (GPay, PhonePe, Paytm, etc). Settlement
+        is asynchronous; NPCI calls `POST /v1/recharge/webhook` once the transaction reaches a
+        terminal state.
+      operationId: initiateRecharge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RechargeRequest'
+            example:
+              vehicle_id: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+              amount_inr: "500.00"
+              upi_handle_hint: "priya@okhdfc"
+      responses:
+        '201':
+          description: Recharge initiated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RechargeTxn'
+              example:
+                id: "01HV5M3K7E9V4P2N8R5T2C0W1Q"
+                vehicle_id: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+                fastag_serial: "608216-0011223344"
+                amount_inr: "500.00"
+                status: "initiated"
+                upi_intent_url: "upi://pay?pa=fastag@npci&pn=FASTagRecharge&tr=01HV5M3K7E9V4P2N8R5T2C0W1Q&am=500.00&cu=INR"
+                provider_reference: null
+                created_at: "2026-05-24T08:43:02Z"
+                updated_at: "2026-05-24T08:43:02Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Recharge could not be initiated by the upstream provider.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "provider_declined"
+                  message: "Issuing bank temporarily unavailable. Try again in a minute."
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /recharge/webhook:
+    post:
+      tags: [Recharge]
+      summary: NPCI settlement webhook
+      description: |
+        Server-to-server callback invoked by NPCI's UPI switch (or the issuing bank) when a
+        recharge transaction reaches a terminal state. Authenticated via an HMAC signature
+        in the `X-NPCI-Signature` header rather than the bearer token used elsewhere.
+      operationId: rechargeWebhook
+      security:
+        - NpciWebhookSignature: []
+      parameters:
+        - name: X-NPCI-Signature
+          in: header
+          required: true
+          description: Hex-encoded HMAC-SHA256 signature over the raw request body.
+          schema:
+            type: string
+            example: "a3f1c5d80b9e2a47..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RechargeWebhookPayload'
+            example:
+              transaction_id: "01HV5M3K7E9V4P2N8R5T2C0W1Q"
+              provider_reference: "NPCI-20260524-87412"
+              status: "success"
+              settled_amount_inr: "500.00"
+              settled_at: "2026-05-24T08:44:18Z"
+      responses:
+        '200':
+          description: Webhook accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acknowledged:
+                    type: boolean
+                example:
+                  acknowledged: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Signature did not verify.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "signature_invalid"
+                  message: "HMAC signature did not match."
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /telemetry:
+    post:
+      tags: [Telemetry]
+      summary: Submit post-toll experience telemetry
+      description: |
+        Submitted by the client a few seconds after the user passes through a toll plaza.
+        Captures whether the lane camera read the FASTag successfully, queue length, dwell
+        time, and an optional user rating. Feeds the aggregated toll-health dashboard.
+      operationId: postTelemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryEvent'
+            example:
+              vehicle_id: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+              toll_plaza_id: "TP-NH48-ELC-014"
+              outcome: "read_success"
+              dwell_seconds: 12
+              queue_length_vehicles: 4
+              rating: 4
+              comment: "Smooth pass-through, no honking today."
+              occurred_at: "2026-05-24T08:46:55Z"
+      responses:
+        '202':
+          description: Telemetry accepted for aggregation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean
+                  event_id:
+                    type: string
+                example:
+                  accepted: true
+                  event_id: "01HV5M5Q4D8B6N9V2X8K3Q1R7T"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /toll-health:
+    get:
+      tags: [Tolls]
+      summary: Aggregated toll-health dashboard data
+      description: |
+        Returns aggregated, anonymised health metrics for every toll plaza in the system over
+        the requested time window. Intended for the NHAI staff dashboard; requires the bearer
+        token to carry the `role:nhai_analyst` scope.
+      operationId: getTollHealth
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Inclusive start of window (RFC 3339). Defaults to 24h ago.
+          schema:
+            type: string
+            format: date-time
+            example: "2026-05-23T08:00:00Z"
+        - name: to
+          in: query
+          required: false
+          description: Exclusive end of window (RFC 3339). Defaults to now.
+          schema:
+            type: string
+            format: date-time
+            example: "2026-05-24T08:00:00Z"
+        - name: state
+          in: query
+          required: false
+          description: ISO 3166-2 state code, e.g. `IN-KA`, to filter plazas to one state.
+          schema:
+            type: string
+            example: "IN-KA"
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Aggregated dashboard data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TollHealthDashboard'
+              example:
+                window:
+                  from: "2026-05-23T08:00:00Z"
+                  to: "2026-05-24T08:00:00Z"
+                items:
+                  - toll_plaza_id: "TP-NH48-ELC-014"
+                    toll_plaza_name: "Electronic City Toll Plaza"
+                    state: "IN-KA"
+                    total_passes: 18234
+                    read_success_rate: 0.978
+                    avg_dwell_seconds: 11.4
+                    avg_queue_length: 3.2
+                    avg_user_rating: 4.1
+                    low_balance_rejections: 84
+                page:
+                  next_cursor: null
+                  page_size: 50
+                  total_estimate: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+  /tolls/nearby:
+    get:
+      tags: [Tolls]
+      summary: List toll plazas near a coordinate
+      description: Returns toll plazas within `radius_km` of the supplied latitude and longitude.
+      operationId: listNearbyTolls
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude in decimal degrees (WGS-84).
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+            example: 12.8389
+        - name: lon
+          in: query
+          required: true
+          description: Longitude in decimal degrees (WGS-84).
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+            example: 77.6770
+        - name: radius_km
+          in: query
+          required: false
+          description: Search radius in kilometres. Defaults to 5 and is capped at 50.
+          schema:
+            type: number
+            format: double
+            minimum: 0.1
+            maximum: 50
+            default: 5
+            example: 5
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Toll plazas within the requested radius, sorted by distance ascending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TollPlazaList'
+              example:
+                items:
+                  - id: "TP-NH48-ELC-014"
+                    name: "Electronic City Toll Plaza"
+                    highway: "NH-48"
+                    state: "IN-KA"
+                    lat: 12.8389
+                    lon: 77.6770
+                    distance_meters: 412
+                    lanes: 12
+                    fastag_only_lanes: 10
+                page:
+                  next_cursor: null
+                  page_size: 20
+                  total_estimate: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Bearer token issued by `POST /v1/auth/otp-verify`. Tokens are JWTs signed with HS256
+        and have a 30-day default lifetime.
+    NpciWebhookSignature:
+      type: apiKey
+      in: header
+      name: X-NPCI-Signature
+      description: HMAC-SHA256 signature over the raw request body, hex-encoded.
+
+  parameters:
+    PageSize:
+      name: page_size
+      in: query
+      required: false
+      description: Maximum number of items to return per page. Defaults to 20, capped at 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        example: 20
+    PageCursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor returned by the previous page; omit on the first request.
+      schema:
+        type: string
+        example: "eyJvZmZzZXQiOjIwfQ=="
+
+  headers:
+    XRateLimitLimit:
+      description: The maximum number of requests permitted in the current window.
+      schema:
+        type: integer
+        example: 120
+    XRateLimitRemaining:
+      description: The number of requests remaining in the current window.
+      schema:
+        type: integer
+        example: 117
+    XRateLimitReset:
+      description: Unix epoch seconds at which the current rate-limit window resets.
+      schema:
+        type: integer
+        example: 1779964440
+    RetryAfter:
+      description: Seconds the client should wait before retrying. Present on 429 responses.
+      schema:
+        type: integer
+        example: 30
+
+  responses:
+    BadRequest:
+      description: The request was malformed or failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "validation_failed"
+              message: "Field `phone` must be an E.164 formatted Indian mobile number."
+              details:
+                - field: "phone"
+                  issue: "format"
+    Unauthorized:
+      description: Missing, expired, or invalid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "unauthorized"
+              message: "Authentication required."
+    Forbidden:
+      description: Authenticated but lacking the required scope or role.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "forbidden"
+              message: "This endpoint requires the `role:nhai_analyst` scope."
+    NotFound:
+      description: The requested resource does not exist or is not visible to the caller.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "not_found"
+              message: "Resource not found."
+    RateLimited:
+      description: The client has exceeded the rate limit for this endpoint.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "rate_limited"
+              message: "Too many requests. Retry after 30 seconds."
+    ServerError:
+      description: An unexpected server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "internal_error"
+              message: "Something went wrong on our end. The incident has been logged."
+
+  schemas:
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Stable machine-readable error code.
+              example: "validation_failed"
+            message:
+              type: string
+              description: Human-readable message safe to surface to end users.
+              example: "Field `phone` must be an E.164 formatted Indian mobile number."
+            details:
+              type: array
+              description: Optional structured details, primarily for validation errors.
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: "phone"
+                  issue:
+                    type: string
+                    example: "format"
+
+    PageInfo:
+      type: object
+      description: Cursor-based pagination envelope returned alongside list responses.
+      required: [page_size]
+      properties:
+        next_cursor:
+          type: [string, "null"]
+          description: Opaque cursor to pass as `cursor` on the next request, or null if this is the last page.
+          example: "eyJvZmZzZXQiOjQwfQ=="
+        page_size:
+          type: integer
+          description: The page size that was actually applied.
+          example: 20
+        total_estimate:
+          type: integer
+          description: Best-effort estimate of the total result count. May be approximate.
+          example: 184
+
+    OtpRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          description: Indian mobile number in E.164 format.
+          pattern: '^\+91[6-9][0-9]{9}$'
+          example: "+919876543210"
+
+    OtpRequestAccepted:
+      type: object
+      required: [request_id, expires_in_seconds]
+      properties:
+        request_id:
+          type: string
+          description: Opaque request ID. Must be echoed back to `/auth/otp-verify`.
+          example: "01HV5KZ8K2H8M3W6QF8P3Z2X9T"
+        expires_in_seconds:
+          type: integer
+          description: Seconds until the OTP expires.
+          example: 300
+
+    OtpVerify:
+      type: object
+      required: [request_id, phone, code]
+      properties:
+        request_id:
+          type: string
+          example: "01HV5KZ8K2H8M3W6QF8P3Z2X9T"
+        phone:
+          type: string
+          pattern: '^\+91[6-9][0-9]{9}$'
+          example: "+919876543210"
+        code:
+          type: string
+          description: 6-digit numeric OTP delivered via SMS.
+          pattern: '^[0-9]{6}$'
+          example: "428193"
+
+    AuthSession:
+      type: object
+      required: [token, token_type, expires_in_seconds, user]
+      properties:
+        token:
+          type: string
+          description: "JWT bearer token. Send as `Authorization: Bearer <token>`."
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMUhWNUtaOEsySDhNM1c2UUY4UDNaMlg5VCJ9.dQw4w9WgXcQ"
+        token_type:
+          type: string
+          enum: [Bearer]
+          example: "Bearer"
+        expires_in_seconds:
+          type: integer
+          example: 2592000
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      required: [id, phone, created_at]
+      properties:
+        id:
+          type: string
+          description: ULID identifying the user.
+          example: "01HV5KZ8K2H8M3W6QF8P3Z2X9T"
+        phone:
+          type: string
+          example: "+919876543210"
+        display_name:
+          type: [string, "null"]
+          example: "Priya R."
+        email:
+          type: [string, "null"]
+          format: email
+          example: "priya@example.in"
+        preferred_language:
+          type: [string, "null"]
+          description: BCP-47 language tag.
+          example: "en-IN"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:31:42Z"
+        is_new_user:
+          type: boolean
+          description: True only on the response returned by `/auth/otp-verify` for a brand-new account.
+          example: false
+
+    UserUpdate:
+      type: object
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: "Priya Ramaswamy"
+        email:
+          type: string
+          format: email
+          example: "priya.r@example.in"
+        preferred_language:
+          type: string
+          example: "en-IN"
+
+    Vehicle:
+      type: object
+      required: [id, registration_number, vehicle_class, created_at]
+      properties:
+        id:
+          type: string
+          example: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+        registration_number:
+          type: string
+          description: Vehicle registration plate (uppercase, no spaces).
+          pattern: '^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$'
+          example: "KA01AB1234"
+        make:
+          type: [string, "null"]
+          example: "Maruti Suzuki"
+        model:
+          type: [string, "null"]
+          example: "Swift"
+        vehicle_class:
+          type: string
+          description: NHAI vehicle class code (VC4 = Car/Jeep/Van).
+          enum: [VC4, VC5, VC6, VC7, VC12, VC15, VC16]
+          example: "VC4"
+        fuel_type:
+          type: [string, "null"]
+          enum: [petrol, diesel, cng, electric, hybrid, null]
+          example: "petrol"
+        color:
+          type: [string, "null"]
+          example: "Pearl White"
+        fastag_serial:
+          type: [string, "null"]
+          description: FASTag tag identifier (TID).
+          example: "608216-0011223344"
+        fastag_bank:
+          type: [string, "null"]
+          description: Short name of the issuing bank.
+          example: "ICICI"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:35:12Z"
+
+    VehicleCreate:
+      type: object
+      required: [registration_number, vehicle_class]
+      properties:
+        registration_number:
+          type: string
+          pattern: '^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$'
+          example: "KA01AB1234"
+        make:
+          type: string
+          example: "Maruti Suzuki"
+        model:
+          type: string
+          example: "Swift"
+        vehicle_class:
+          type: string
+          enum: [VC4, VC5, VC6, VC7, VC12, VC15, VC16]
+          example: "VC4"
+        fuel_type:
+          type: string
+          enum: [petrol, diesel, cng, electric, hybrid]
+          example: "petrol"
+        color:
+          type: string
+          example: "Pearl White"
+
+    VehicleList:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vehicle'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+
+    LocationPing:
+      type: object
+      required: [vehicle_id, lat, lon, recorded_at]
+      properties:
+        vehicle_id:
+          type: string
+          example: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 12.971599
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: 77.594566
+        speed_kmph:
+          type: number
+          format: double
+          minimum: 0
+          example: 64.5
+        heading_degrees:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 360
+          example: 215.0
+        accuracy_meters:
+          type: number
+          format: double
+          minimum: 0
+          example: 8.0
+        recorded_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:42:11Z"
+
+    LocationPingResponse:
+      type: object
+      required: [accepted, triggers]
+      properties:
+        accepted:
+          type: boolean
+          example: true
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeofenceEvent'
+
+    GeofenceEvent:
+      type: object
+      required: [id, event_type, toll_plaza_id, occurred_at]
+      properties:
+        id:
+          type: string
+          example: "01HV5M1ZZG0E0Z0Z0Z0Z0Z0Z0Z"
+        event_type:
+          type: string
+          enum: [approaching_toll, entered_plaza, exited_plaza, low_balance_warning]
+          example: "approaching_toll"
+        toll_plaza_id:
+          type: string
+          example: "TP-NH48-ELC-014"
+        toll_plaza_name:
+          type: [string, "null"]
+          example: "Electronic City Toll Plaza"
+        distance_meters:
+          type: [integer, "null"]
+          description: Distance from the vehicle to the plaza centroid in metres.
+          example: 1230
+        eta_seconds:
+          type: [integer, "null"]
+          description: Estimated seconds until arrival at the plaza.
+          example: 65
+        recommended_action:
+          type: [string, "null"]
+          enum: [prompt_recharge, show_lane_guidance, notify_low_balance, none, null]
+          example: "prompt_recharge"
+        occurred_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:42:11Z"
+
+    FastagStatus:
+      type: object
+      required: [vehicle_registration, status, blacklisted, last_synced_at]
+      properties:
+        vehicle_registration:
+          type: string
+          example: "KA01AB1234"
+        fastag_serial:
+          type: [string, "null"]
+          example: "608216-0011223344"
+        issuing_bank:
+          type: [string, "null"]
+          example: "ICICI"
+        balance_inr:
+          type: [string, "null"]
+          description: Current FASTag wallet balance in INR. Encoded as a fixed-point decimal string.
+          example: "84.50"
+        status:
+          type: string
+          enum: [active, low_balance, blacklisted, inactive, unknown]
+          example: "active"
+        blacklisted:
+          type: boolean
+          example: false
+        last_synced_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:41:50Z"
+        low_balance_threshold_inr:
+          type: [string, "null"]
+          example: "150.00"
+        low_balance:
+          type: boolean
+          description: True if `balance_inr < low_balance_threshold_inr`.
+          example: true
+
+    RechargeRequest:
+      type: object
+      required: [vehicle_id, amount_inr]
+      properties:
+        vehicle_id:
+          type: string
+          example: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+        amount_inr:
+          type: string
+          description: Recharge amount in INR. Fixed-point decimal string, max two decimal places.
+          pattern: '^[0-9]+(\.[0-9]{1,2})?$'
+          example: "500.00"
+        upi_handle_hint:
+          type: [string, "null"]
+          description: Optional UPI VPA hint to pre-populate in the UPI Intent.
+          example: "priya@okhdfc"
+
+    RechargeTxn:
+      type: object
+      required: [id, vehicle_id, amount_inr, status, created_at]
+      properties:
+        id:
+          type: string
+          example: "01HV5M3K7E9V4P2N8R5T2C0W1Q"
+        vehicle_id:
+          type: string
+          example: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+        fastag_serial:
+          type: [string, "null"]
+          example: "608216-0011223344"
+        amount_inr:
+          type: string
+          example: "500.00"
+        status:
+          type: string
+          enum: [initiated, pending, success, failed, refunded]
+          example: "initiated"
+        upi_intent_url:
+          type: [string, "null"]
+          description: UPI deep-link the client should open via Android Intent / iOS Universal Link.
+          example: "upi://pay?pa=fastag@npci&pn=FASTagRecharge&tr=01HV5M3K7E9V4P2N8R5T2C0W1Q&am=500.00&cu=INR"
+        provider_reference:
+          type: [string, "null"]
+          description: NPCI / bank reference number once the transaction settles.
+          example: "NPCI-20260524-87412"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:43:02Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:43:02Z"
+
+    RechargeWebhookPayload:
+      type: object
+      required: [transaction_id, status]
+      properties:
+        transaction_id:
+          type: string
+          description: The `id` of the originating `RechargeTxn`.
+          example: "01HV5M3K7E9V4P2N8R5T2C0W1Q"
+        provider_reference:
+          type: string
+          example: "NPCI-20260524-87412"
+        status:
+          type: string
+          enum: [success, failed, refunded]
+          example: "success"
+        settled_amount_inr:
+          type: [string, "null"]
+          example: "500.00"
+        failure_reason:
+          type: [string, "null"]
+          description: Provider-supplied reason when status is `failed`.
+          example: null
+        settled_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:44:18Z"
+
+    TelemetryEvent:
+      type: object
+      required: [vehicle_id, toll_plaza_id, outcome, occurred_at]
+      properties:
+        vehicle_id:
+          type: string
+          example: "01HV5M0P3R6Z8M2C4V6X8K1Q4N"
+        toll_plaza_id:
+          type: string
+          example: "TP-NH48-ELC-014"
+        outcome:
+          type: string
+          enum: [read_success, read_failure, manual_override, lane_redirected, low_balance_rejected]
+          example: "read_success"
+        dwell_seconds:
+          type: [integer, "null"]
+          minimum: 0
+          example: 12
+        queue_length_vehicles:
+          type: [integer, "null"]
+          minimum: 0
+          example: 4
+        rating:
+          type: [integer, "null"]
+          description: 1-5 star user rating for the toll experience.
+          minimum: 1
+          maximum: 5
+          example: 4
+        comment:
+          type: [string, "null"]
+          maxLength: 500
+          example: "Smooth pass-through, no honking today."
+        occurred_at:
+          type: string
+          format: date-time
+          example: "2026-05-24T08:46:55Z"
+
+    TollPlaza:
+      type: object
+      required: [id, name, lat, lon]
+      properties:
+        id:
+          type: string
+          example: "TP-NH48-ELC-014"
+        name:
+          type: string
+          example: "Electronic City Toll Plaza"
+        highway:
+          type: [string, "null"]
+          example: "NH-48"
+        state:
+          type: [string, "null"]
+          description: ISO 3166-2 state code.
+          example: "IN-KA"
+        lat:
+          type: number
+          format: double
+          example: 12.8389
+        lon:
+          type: number
+          format: double
+          example: 77.6770
+        distance_meters:
+          type: [integer, "null"]
+          description: Populated only on `/tolls/nearby` responses.
+          example: 412
+        lanes:
+          type: [integer, "null"]
+          example: 12
+        fastag_only_lanes:
+          type: [integer, "null"]
+          example: 10
+
+    TollPlazaList:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TollPlaza'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+
+    TollHealthEntry:
+      type: object
+      required: [toll_plaza_id, total_passes, read_success_rate]
+      properties:
+        toll_plaza_id:
+          type: string
+          example: "TP-NH48-ELC-014"
+        toll_plaza_name:
+          type: [string, "null"]
+          example: "Electronic City Toll Plaza"
+        state:
+          type: [string, "null"]
+          example: "IN-KA"
+        total_passes:
+          type: integer
+          example: 18234
+        read_success_rate:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          example: 0.978
+        avg_dwell_seconds:
+          type: number
+          format: double
+          minimum: 0
+          example: 11.4
+        avg_queue_length:
+          type: number
+          format: double
+          minimum: 0
+          example: 3.2
+        avg_user_rating:
+          type: [number, "null"]
+          format: double
+          minimum: 1
+          maximum: 5
+          example: 4.1
+        low_balance_rejections:
+          type: integer
+          minimum: 0
+          example: 84
+
+    TollHealthDashboard:
+      type: object
+      required: [window, items, page]
+      properties:
+        window:
+          type: object
+          required: [from, to]
+          properties:
+            from:
+              type: string
+              format: date-time
+              example: "2026-05-23T08:00:00Z"
+            to:
+              type: string
+              format: date-time
+              example: "2026-05-24T08:00:00Z"
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TollHealthEntry'
+        page:
+          $ref: '#/components/schemas/PageInfo'

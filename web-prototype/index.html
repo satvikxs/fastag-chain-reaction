@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FASTag Chain Reaction · Driver App Demo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          highway:  '#0B2545',
+          highway2: '#13315C',
+          alert:    '#F4A261',
+          alertRed: '#E63946',
+          success:  '#06A77D',
+          ink:      '#0F172A',
+          page:     '#FAFAF7',
+        },
+        boxShadow: {
+          phone: '0 30px 60px -15px rgba(11,37,69,0.45), 0 10px 25px -10px rgba(11,37,69,0.25)',
+          card:  '0 8px 24px -8px rgba(15,23,42,0.12)',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --highway:  #0B2545;
+    --highway2: #13315C;
+    --alert:    #F4A261;
+    --alertRed: #E63946;
+    --success:  #06A77D;
+    --page:     #FAFAF7;
+  }
+  html, body {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% 0%, rgba(244,162,97,0.10), transparent 60%),
+      radial-gradient(1000px 500px at 100% 100%, rgba(6,167,125,0.10), transparent 60%),
+      linear-gradient(180deg, #FAFAF7 0%, #F1ECE0 100%);
+    min-height: 100vh;
+    color: var(--highway);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .display { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  /* ====== iPhone frame ====== */
+  .phone {
+    width: 360px;
+    height: 720px;
+    border-radius: 52px;
+    background: #0B0E14;
+    padding: 13px;
+    position: relative;
+    box-shadow:
+      0 40px 80px -20px rgba(11,37,69,0.55),
+      0 14px 30px -12px rgba(11,37,69,0.30),
+      inset 0 0 0 2px rgba(255,255,255,0.04);
+  }
+  .phone.small {
+    width: 280px;
+    height: 560px;
+    border-radius: 42px;
+    padding: 10px;
+  }
+  .phone.small .notch { width: 92px; height: 24px; top: 8px; }
+  .phone.small .notch .speaker { width: 32px; height: 5px; }
+  .phone.small .notch .cam { width: 7px; height: 7px; }
+  .phone.small .phone-screen { border-radius: 32px; }
+  .phone.small::before { border-radius: 36px; inset: 5px; }
+  .phone.small .status-bar { height: 36px; padding: 0 18px; font-size: 11px; }
+  .phone::before {
+    content:"";
+    position:absolute; inset:7px;
+    border-radius: 45px;
+    border: 1px solid rgba(255,255,255,0.06);
+    pointer-events:none;
+  }
+  .phone-screen {
+    position:relative;
+    width:100%; height:100%;
+    border-radius: 40px;
+    overflow:hidden;
+    background:#fff;
+  }
+  .notch {
+    position:absolute;
+    top:10px; left:50%; transform:translateX(-50%);
+    width:118px; height:30px;
+    background:#0B0E14;
+    border-radius:22px;
+    z-index:60;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .notch .cam { width:9px; height:9px; border-radius:50%; background:#1a1f2b; box-shadow: inset 0 0 0 1px #2a3142; }
+  .notch .speaker { width:42px; height:6px; border-radius:4px; background:#1a1f2b; }
+  .status-bar {
+    position:relative; z-index:50;
+    height:46px; padding: 0 26px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:13px; font-weight:600; color: var(--highway);
+  }
+
+  /* Phone badge */
+  .phone-badge {
+    text-align:center;
+    margin-bottom: 12px;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 999px;
+    display: inline-block;
+  }
+  .phone-badge.good {
+    background: rgba(6,167,125,0.12);
+    color: var(--success);
+    border: 1px solid rgba(6,167,125,0.25);
+  }
+  .phone-badge.bad {
+    background: rgba(230,57,70,0.10);
+    color: var(--alertRed);
+    border: 1px solid rgba(230,57,70,0.30);
+  }
+
+  .phone-col { display: flex; flex-direction: column; align-items: center; }
+
+  /* Alt-timeline dashed border on bad phone (subtle) */
+  .phone.alt-timeline {
+    outline: 2px dashed rgba(230,57,70,0.35);
+    outline-offset: 8px;
+    opacity: 0.85;
+    transition: opacity 0.5s ease;
+  }
+  .phone.alt-timeline.disaster { opacity: 1; }
+
+  /* shake animation when alert hits */
+  @keyframes shake {
+    0%,100% { transform: rotate(0deg); }
+    20%     { transform: rotate(-4deg) translateX(-2px); }
+    40%     { transform: rotate(4deg)  translateX(2px); }
+    60%     { transform: rotate(-3deg) translateX(-1px); }
+    80%     { transform: rotate(3deg)  translateX(1px); }
+  }
+  .shake { animation: shake 0.6s cubic-bezier(.36,.07,.19,.97); }
+
+  /* ====== Map ====== */
+  .map {
+    position:absolute; inset:0;
+    background:
+      linear-gradient(180deg, #E6EEDC 0%, #D8E5C9 55%, #C8DBB5 100%);
+    overflow:hidden;
+  }
+  .map::before {
+    content:"";
+    position:absolute; inset:0;
+    background:
+      radial-gradient(60% 30% at 80% 20%, rgba(11,37,69,0.05), transparent 70%),
+      radial-gradient(50% 25% at 20% 80%, rgba(11,37,69,0.05), transparent 70%);
+  }
+  .road {
+    position:absolute;
+    top:55%; left:-10%;
+    width:120%; height:90px;
+    background: linear-gradient(180deg, #2A2F3A 0%, #1A1E26 100%);
+    transform: rotate(-3deg);
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.4), 0 16px 40px -10px rgba(0,0,0,0.25);
+  }
+  .road::before, .road::after {
+    content:""; position:absolute; left:0; right:0;
+    height:3px; background: rgba(255,255,255,0.55);
+  }
+  .road::before { top:14px; }
+  .road::after  { bottom:14px; }
+
+  .lane-dashes {
+    position:absolute; top:50%; left:0; right:0;
+    height:6px; transform: translateY(-50%);
+    background-image: repeating-linear-gradient(
+      90deg,
+      #F4D35E 0 40px,
+      transparent 40px 70px
+    );
+    animation: roadFlow 1.4s linear infinite;
+  }
+  @keyframes roadFlow {
+    from { background-position: 0 0; }
+    to   { background-position: -70px 0; }
+  }
+
+  .you-dot {
+    position:absolute;
+    top: calc(55% + 45px); left:50%;
+    width:22px; height:22px;
+    border-radius:50%;
+    background: var(--highway);
+    box-shadow: 0 0 0 4px rgba(11,37,69,0.18), 0 0 0 10px rgba(11,37,69,0.08);
+    transform: translate(-50%, -50%);
+    z-index:5;
+  }
+  .you-dot::after {
+    content:""; position:absolute; inset:-12px;
+    border-radius:50%;
+    border: 2px solid rgba(11,37,69,0.35);
+    animation: pulse 2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.6); opacity:1; }
+    100%{ transform: scale(1.6); opacity:0; }
+  }
+
+  /* Other cars on road (scroll with road, stay in road lanes) */
+  .traffic-layer {
+    position: absolute;
+    top: 55%;
+    left: 0; right: 0;
+    height: 90px;
+    transform: rotate(-3deg);
+    pointer-events: none;
+    z-index: 4;
+  }
+  .car {
+    position: absolute;
+    width: 20px; height: 12px;
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .car::before {
+    content:"";
+    position: absolute;
+    top: 2px; left: 3px; right: 3px; bottom: 2px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 1px;
+  }
+  .car.blue   { background: #6FA8DC; }
+  .car.blue2  { background: #7FB3D5; }
+  .car.grey   { background: #B8BCC4; }
+  .car.grey2  { background: #9CA3AF; }
+  .car.green  { background: #82C99B; }
+  .car.white  { background: #F0F0EC; }
+
+  /* Toll icon — anchored absolutely, does NOT scroll */
+  .toll-icon {
+    position:absolute;
+    top: 60%; right: 24px;
+    width:48px; height:48px;
+    transform: translateY(-50%) scale(1);
+    transition: transform 0.6s ease, right 0.6s ease;
+    z-index:6;
+  }
+  .phone.small .toll-icon { right: 18px; width: 38px; height: 38px; }
+  .toll-icon .ring {
+    position:absolute; inset:-8px; border-radius:50%;
+    border:3px solid var(--alertRed);
+    opacity:0;
+  }
+  .toll-icon.alerting .ring {
+    animation: tollPulse 1.2s ease-out infinite;
+  }
+  @keyframes tollPulse {
+    0%   { transform: scale(0.7); opacity:1; }
+    100% { transform: scale(1.8); opacity:0; }
+  }
+
+  /* ====== Bottom info card (driving) ====== */
+  .info-card {
+    position:absolute;
+    left:14px; right:14px; bottom:18px;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(10px);
+    border-radius: 22px;
+    padding: 16px 18px;
+    box-shadow: 0 12px 30px -10px rgba(15,23,42,0.20);
+    border: 1px solid rgba(11,37,69,0.05);
+  }
+  .phone.small .info-card { left: 10px; right: 10px; bottom: 12px; padding: 10px 12px; border-radius: 16px; }
+
+  /* Top alert banner */
+  .alert-banner {
+    position:absolute;
+    top:-100%; left:8px; right:8px;
+    background: linear-gradient(135deg, #E63946 0%, #C92E3C 100%);
+    color: #fff;
+    padding: 14px 16px;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px -8px rgba(230,57,70,0.5);
+    z-index: 40;
+    transition: top 0.5s cubic-bezier(.2,.9,.25,1.2);
+    font-weight: 600;
+    font-size: 13px;
+    line-height:1.35;
+  }
+  .alert-banner.show { top: 56px; }
+
+  /* Balance pill */
+  .balance-pill {
+    transition: color 0.3s ease, background 0.3s ease;
+  }
+  @keyframes flashRed {
+    0%,100% { color: var(--alertRed); }
+    50%     { color: #fff; background: var(--alertRed); }
+  }
+  .balance-pill.alerting {
+    animation: flashRed 1.2s ease-in-out infinite;
+    padding: 2px 8px;
+    border-radius: 8px;
+    display: inline-block;
+  }
+
+  /* CTA */
+  .cta {
+    background: linear-gradient(135deg, #F4A261 0%, #E68A3D 100%);
+    color: #1A0F00;
+    font-weight: 800;
+    border-radius: 16px;
+    padding: 14px 16px;
+    width:100%;
+    box-shadow: 0 10px 24px -8px rgba(244,162,97,0.55);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    font-size: 15px;
+  }
+  .cta:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(244,162,97,0.7); }
+  .cta:active { transform: scale(0.97); }
+
+  /* ====== Bottom sheet (UPI) ====== */
+  .backdrop {
+    position:absolute; inset:0;
+    background: rgba(11,14,20,0.55);
+    backdrop-filter: blur(4px);
+    opacity:0; pointer-events:none;
+    transition: opacity 0.4s ease;
+    z-index: 45;
+  }
+  .backdrop.show { opacity:1; pointer-events:auto; }
+
+  .sheet {
+    position:absolute;
+    left:0; right:0; bottom:0;
+    background:#fff;
+    border-radius: 28px 28px 0 0;
+    padding: 18px 18px 22px;
+    transform: translateY(100%);
+    transition: transform 0.45s cubic-bezier(.2,.9,.25,1.05);
+    z-index: 46;
+    box-shadow: 0 -20px 40px -10px rgba(0,0,0,0.2);
+  }
+  .sheet.show { transform: translateY(0); }
+  .sheet-handle {
+    width:42px; height:5px; border-radius:3px;
+    background:#D8DCE5;
+    margin: 0 auto 14px;
+  }
+
+  .amount-tile {
+    flex:1;
+    border: 2px solid #E5E8EE;
+    border-radius: 14px;
+    padding: 12px 8px;
+    text-align:center;
+    background:#fff;
+    cursor:pointer;
+    transition: all 0.15s ease;
+    position:relative;
+  }
+  .amount-tile .amt { font-weight:800; font-size:18px; color: var(--highway); }
+  .amount-tile.selected {
+    border-color: var(--success);
+    background: rgba(6,167,125,0.06);
+  }
+  .amount-tile .badge {
+    position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+    background: var(--success); color:#fff;
+    font-size:9px; font-weight:700;
+    padding: 3px 8px; border-radius: 999px;
+    letter-spacing:0.04em;
+    white-space:nowrap;
+  }
+
+  .upi-row {
+    display:flex; align-items:center; gap:12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border:1px solid #EDEFF3;
+    background:#fff;
+    cursor:pointer;
+    transition: transform 0.12s ease, background 0.15s ease;
+  }
+  .upi-row:hover { background:#FAFBFD; }
+  .upi-row:active, .upi-row.pressed { transform: scale(0.97); background:#F3F5F9; }
+  .upi-logo {
+    width:38px; height:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; color:#fff; font-size:13px;
+    flex-shrink:0;
+  }
+  .upi-phonepe { background: linear-gradient(135deg, #5F259F 0%, #4A1D7E 100%); }
+  .upi-gpay    { background:#fff; border:1px solid #E5E8EE; }
+  .upi-paytm   { background: linear-gradient(135deg, #00BAF2 0%, #002970 100%); }
+
+  /* Spinner */
+  .spinner {
+    width:20px; height:20px;
+    border: 3px solid rgba(11,37,69,0.15);
+    border-top-color: var(--highway);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ====== Success screen ====== */
+  .check-circle {
+    width:96px; height:96px;
+    border-radius:50%;
+    background: var(--success);
+    display:flex; align-items:center; justify-content:center;
+    margin: 0 auto;
+    transform: scale(0);
+    box-shadow: 0 12px 30px -8px rgba(6,167,125,0.45);
+  }
+  .check-circle.pop {
+    animation: pop 0.7s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes pop {
+    0%   { transform: scale(0); }
+    60%  { transform: scale(1.2); }
+    100% { transform: scale(1.0); }
+  }
+
+  /* Confetti */
+  .confetti {
+    position:absolute;
+    width:8px; height:10px;
+    top:-20px;
+    opacity:0;
+  }
+  .confetti.go {
+    animation: confettiFall 2.4s cubic-bezier(.3,.6,.5,1) forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(-20px) rotate(0deg);   opacity:1; }
+    100% { transform: translateY(720px) rotate(540deg); opacity:0; }
+  }
+
+  /* Lane card */
+  .lane {
+    flex:1; height:46px;
+    border-radius:8px;
+    background:#EFF1F5;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color: var(--highway);
+    position:relative;
+  }
+  .lane.best {
+    background: linear-gradient(135deg, #06A77D 0%, #04835E 100%);
+    color:#fff;
+    box-shadow: 0 8px 18px -6px rgba(6,167,125,0.55);
+  }
+
+  /* Toll barrier */
+  .barrier {
+    position:absolute;
+    width:80px; height:5px;
+    background: linear-gradient(90deg, #E63946 0 25%, #fff 25% 50%, #E63946 50% 75%, #fff 75% 100%);
+    transform-origin: left center;
+    transform: rotate(0deg);
+    transition: transform 0.5s cubic-bezier(.5,.1,.3,1);
+    border-radius:2px;
+  }
+  .barrier.up { transform: rotate(-78deg); }
+
+  /* Stat counter card */
+  .stat-card {
+    background: linear-gradient(155deg, #06A77D 0%, #058564 100%);
+    color:#fff;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 14px 30px -8px rgba(6,167,125,0.45);
+  }
+
+  /* Disaster overlay on bad phone */
+  .disaster-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(230,57,70,0.96) 0%, rgba(190,38,52,0.98) 100%);
+    color: #fff;
+    transform: translateY(100%);
+    transition: transform 0.6s cubic-bezier(.4,.05,.3,1);
+    z-index: 30;
+    display: flex; flex-direction: column;
+    padding: 60px 18px 18px;
+    overflow: hidden;
+  }
+  .disaster-overlay.show { transform: translateY(0); }
+  .stuck-counter {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 800;
+    font-size: 64px;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+  .disaster-stats {
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 10px;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  .final-disaster-card {
+    background: #fff;
+    color: var(--alertRed);
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 12px;
+    border: 2px solid #fff;
+  }
+
+  /* Scene fade */
+  .scene {
+    position:absolute; inset:0;
+    opacity:0; pointer-events:none;
+    transition: opacity 0.4s ease;
+  }
+  .scene.active { opacity:1; pointer-events:auto; }
+
+  /* Header buttons */
+  .header-btn {
+    padding: 9px 14px;
+    border-radius: 12px;
+    background:#fff;
+    border:1px solid rgba(11,37,69,0.10);
+    font-weight:600;
+    font-size:13px;
+    color: var(--highway);
+    box-shadow: 0 4px 10px -4px rgba(11,37,69,0.10);
+    transition: all 0.15s ease;
+    cursor:pointer;
+  }
+  .header-btn:hover { background: var(--page); transform: translateY(-1px); }
+  .header-btn.primary {
+    background: var(--highway); color:#fff; border-color: var(--highway);
+  }
+  .header-btn.primary:hover { background: var(--highway2); }
+
+  .sound-toggle {
+    position: fixed; bottom: 20px; right: 20px;
+    width:48px; height:48px;
+    border-radius: 50%;
+    background:#fff;
+    border:1px solid rgba(11,37,69,0.10);
+    box-shadow: 0 8px 20px -6px rgba(11,37,69,0.25);
+    font-size:20px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    z-index: 100;
+    transition: transform 0.15s ease;
+  }
+  .sound-toggle:hover { transform: scale(1.08); }
+
+  /* Tooltip */
+  .tooltip-wrap { position: relative; display: inline-block; }
+  .tooltip {
+    position:absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    background: var(--highway); color:#fff;
+    padding: 8px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 500;
+    width: 240px; text-align:left;
+    opacity:0; pointer-events:none;
+    transition: opacity 0.15s ease;
+    z-index: 50;
+  }
+  .tooltip-wrap:hover .tooltip { opacity:1; }
+
+  /* Scrubber */
+  .scrubber {
+    margin-top: 16px;
+    width: 360px;
+    height: 4px;
+    background: rgba(11,37,69,0.10);
+    border-radius: 999px;
+    overflow:hidden;
+  }
+  .scrubber > div {
+    height:100%;
+    width:0%;
+    background: linear-gradient(90deg, var(--highway) 0%, var(--alert) 100%);
+    transition: width 0.3s linear;
+  }
+
+  .scene-label {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--highway2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Stage layout: side-by-side desktop, stacked mobile */
+  .stage {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .meanwhile {
+    display: none;
+    font-family: 'Inter', sans-serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--highway2);
+    opacity: 0.7;
+    text-align: center;
+    margin: 12px 0;
+  }
+  @media (max-width: 760px) {
+    .stage { flex-direction: column; align-items: center; }
+    .meanwhile { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== Header ===================== -->
+<header class="max-w-6xl mx-auto px-6 pt-8 pb-4 flex items-center justify-between flex-wrap gap-4">
+  <div class="flex items-center gap-3">
+    <div class="w-11 h-11 rounded-2xl flex items-center justify-center" style="background: linear-gradient(135deg, #0B2545, #13315C);">
+      <span class="text-white font-extrabold text-lg">F</span>
+    </div>
+    <div>
+      <h1 class="text-xl font-extrabold leading-tight">FASTag Chain Reaction <span class="text-highway2 font-semibold">· Driver App</span></h1>
+      <p class="text-sm text-highway2/80">Two timelines, one master clock · Srinagar → Jammu, NH-44</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 flex-wrap">
+    <div class="tooltip-wrap">
+      <button class="header-btn" type="button" aria-label="About">ℹ About</button>
+      <div class="tooltip">
+        Left: with our app. Right: without. Same driver, same toll, same moment — watch the chain reaction get prevented vs unleashed.
+      </div>
+    </div>
+    <button id="skipBtn"  class="header-btn">⏭ Skip to Alert</button>
+    <button id="resetBtn" class="header-btn primary">↻ Reset Demo</button>
+  </div>
+</header>
+
+<!-- ===================== Stage ===================== -->
+<main class="flex flex-col items-center pt-6 pb-20 px-4">
+
+  <div class="stage">
+
+    <!-- ===== MAIN PHONE (with our app) ===== -->
+    <div class="phone-col">
+      <div class="phone-badge good">✓ With our app</div>
+
+      <div id="phoneWrap" class="phone">
+        <div class="notch">
+          <div class="cam"></div>
+          <div class="speaker"></div>
+          <div class="cam"></div>
+        </div>
+        <div class="phone-screen" id="screen">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span class="mono">9:41 AM</span>
+            <div class="flex items-center gap-1.5">
+              <svg width="16" height="11" viewBox="0 0 16 11"><g fill="#0B2545"><rect x="0"  y="7" width="3" height="4" rx="0.5"/><rect x="4"  y="5" width="3" height="6" rx="0.5"/><rect x="8"  y="3" width="3" height="8" rx="0.5"/><rect x="12" y="0" width="3" height="11" rx="0.5"/></g></svg>
+              <svg width="15" height="11" viewBox="0 0 15 11" fill="#0B2545"><path d="M7.5 0C4.6 0 1.9 1.1 0 2.9l1.4 1.4C3 2.9 5.2 2 7.5 2s4.5.9 6.1 2.3L15 2.9C13.1 1.1 10.4 0 7.5 0Zm0 3.5c-2 0-3.8.7-5.1 2L3.8 7c1-1 2.3-1.5 3.7-1.5s2.7.5 3.7 1.5l1.4-1.4c-1.3-1.4-3.1-2.1-5.1-2.1ZM7.5 7c-1.1 0-2.1.4-2.8 1.2L7.5 11l2.8-2.8C9.6 7.4 8.6 7 7.5 7Z"/></svg>
+              <svg width="26" height="12" viewBox="0 0 26 12"><rect x="0.5" y="0.5" width="22" height="11" rx="2.5" fill="none" stroke="#0B2545" opacity="0.6"/><rect x="2"   y="2"   width="18" height="8"  rx="1" fill="#0B2545"/><rect x="23"  y="4"   width="2"  height="4"  rx="0.5" fill="#0B2545" opacity="0.6"/></svg>
+            </div>
+          </div>
+
+          <!-- Alert banner -->
+          <div id="alertBanner" class="alert-banner">
+            <div class="flex items-start gap-2">
+              <span class="text-lg leading-none">⚠</span>
+              <div>
+                <div class="font-bold text-sm mb-0.5">Low FASTag Balance</div>
+                <div class="text-xs font-medium opacity-95">Recharge before Lakhanpur Toll (<span id="alertDist">5.0</span> km away).</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ====== Scene 1: Driving ====== -->
+          <div id="scene-drive" class="scene active">
+            <div class="map">
+              <div class="road"><div class="lane-dashes" id="laneDashes"></div></div>
+              <div class="traffic-layer" id="trafficLayer"></div>
+              <div class="you-dot"></div>
+              <div id="tollIcon" class="toll-icon">
+                <div class="ring"></div>
+                <svg viewBox="0 0 48 48" width="100%" height="100%">
+                  <rect x="6"  y="22" width="36" height="6" rx="1.5" fill="#0B2545"/>
+                  <rect x="10" y="28" width="4"  height="14" fill="#0B2545"/>
+                  <rect x="34" y="28" width="4"  height="14" fill="#0B2545"/>
+                  <rect x="14" y="28" width="20" height="10" rx="1" fill="#fff" stroke="#0B2545" stroke-width="1.5"/>
+                  <text x="24" y="36" text-anchor="middle" font-size="6" font-weight="800" fill="#0B2545" font-family="Plus Jakarta Sans">TOLL</text>
+                  <rect x="6"  y="40" width="36" height="3" fill="#13315C"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="flex items-start justify-between mb-2.5">
+                <div>
+                  <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-highway2/70">Currently Driving</div>
+                  <div class="font-extrabold text-base text-highway mt-0.5">Srinagar → Jammu · NH-44</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-highway2/70">Speed</div>
+                  <div class="font-extrabold text-base text-highway mt-0.5 mono">82 <span class="text-xs font-semibold">km/h</span></div>
+                </div>
+              </div>
+
+              <div class="h-px bg-highway/10 my-2"></div>
+
+              <div class="flex items-center justify-between mt-2">
+                <div>
+                  <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-highway2/70">FASTag Balance</div>
+                  <div class="mt-0.5"><span id="balancePill" class="balance-pill mono text-2xl font-extrabold text-highway">₹<span id="balanceVal">47</span></span></div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-highway2/70">Next Toll</div>
+                  <div class="font-bold text-sm text-highway mt-0.5">Lakhanpur · <span id="distVal" class="mono">8.0</span> km</div>
+                </div>
+              </div>
+
+              <div class="mt-3 flex items-center gap-2">
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md" style="background:#F4D35E; border:1px solid #C9A93B;">
+                  <span class="mono text-xs font-extrabold text-highway">JK 01 AB 1234</span>
+                </div>
+                <span class="text-xs font-semibold text-highway2/70">Tata Sumo</span>
+              </div>
+
+              <button id="rechargeBtn" class="cta mt-4 hidden">
+                ⚡ Recharge ₹500 in 1 tap
+              </button>
+            </div>
+          </div>
+
+          <!-- ====== Scene 3: UPI Sheet overlay ====== -->
+          <div id="backdrop" class="backdrop"></div>
+          <div id="upiSheet" class="sheet">
+            <div class="sheet-handle"></div>
+            <div class="flex items-center gap-2 mb-1">
+              <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md" style="background:#F4D35E; border:1px solid #C9A93B;">
+                <span class="mono text-xs font-extrabold text-highway">JK 01 AB 1234</span>
+              </div>
+              <span class="text-xs font-semibold text-highway2/80">Tata Sumo</span>
+            </div>
+            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-highway2/70 mb-3">Top up FASTag · via UPI</div>
+
+            <div class="flex gap-2 mb-4">
+              <div class="amount-tile" data-amt="200">
+                <div class="amt">₹200</div>
+              </div>
+              <div class="amount-tile selected" data-amt="500">
+                <div class="badge">RECOMMENDED</div>
+                <div class="amt">₹500</div>
+              </div>
+              <div class="amount-tile" data-amt="1000">
+                <div class="amt">₹1000</div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="upi-row" data-upi="PhonePe">
+                <div class="upi-logo upi-phonepe">Pe</div>
+                <div class="flex-1">
+                  <div class="font-bold text-sm text-highway">PhonePe</div>
+                  <div class="text-xs text-highway2/70">UPI · 9876…2451@ybl</div>
+                </div>
+                <div class="text-highway2/40 text-xl">›</div>
+              </div>
+              <div class="upi-row" data-upi="Google Pay">
+                <div class="upi-logo upi-gpay">
+                  <svg width="22" height="22" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.5 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.92a5.07 5.07 0 0 1-2.2 3.33v2.77h3.56c2.08-1.92 3.28-4.74 3.28-8.13Z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.67l-3.56-2.77c-.99.67-2.25 1.07-3.72 1.07-2.86 0-5.28-1.93-6.15-4.52H2.18v2.84A11 11 0 0 0 12 23Z"/>
+                    <path fill="#FBBC04" d="M5.85 14.11A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.77.42 3.45 1.18 4.95l3.67-2.84Z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.65l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.05l3.67 2.84C6.72 7.3 9.14 5.38 12 5.38Z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <div class="font-bold text-sm text-highway">Google Pay</div>
+                  <div class="text-xs text-highway2/70">UPI · 9876…2451@okicici</div>
+                </div>
+                <div class="text-highway2/40 text-xl">›</div>
+              </div>
+              <div class="upi-row" data-upi="Paytm">
+                <div class="upi-logo upi-paytm">P</div>
+                <div class="flex-1">
+                  <div class="font-bold text-sm text-highway">Paytm</div>
+                  <div class="text-xs text-highway2/70">UPI · 9876…2451@paytm</div>
+                </div>
+                <div class="text-highway2/40 text-xl">›</div>
+              </div>
+            </div>
+
+            <div id="upiAuthorizing" class="hidden mt-4 flex items-center gap-3 p-3 rounded-xl" style="background:#F3F5F9;">
+              <div class="spinner"></div>
+              <div class="text-sm font-semibold text-highway">Authorizing ₹500 via <span id="upiChoice">Google Pay</span>…</div>
+            </div>
+          </div>
+
+          <!-- ====== Scene 4: Confirmation ====== -->
+          <div id="scene-success" class="scene">
+            <div class="absolute inset-0" style="background: linear-gradient(180deg, #FAFAF7 0%, #ECF6F0 100%);"></div>
+            <div id="confettiBox" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+            <div class="relative h-full flex flex-col items-center px-6 pt-20 pb-6">
+              <div id="checkCircle" class="check-circle">
+                <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12.5l5 5L20 7"/>
+                </svg>
+              </div>
+              <h2 class="display text-2xl font-extrabold text-highway text-center mt-5">Recharged ₹500</h2>
+              <p class="text-highway2 font-semibold text-center mt-1">New Balance · <span class="mono font-extrabold text-success">₹547</span></p>
+
+              <div class="mt-6 w-full bg-white rounded-2xl p-4 shadow-card border border-highway/5">
+                <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-highway2/70 mb-2">Suggested Lane · Lakhanpur Toll</div>
+                <div class="flex gap-1.5">
+                  <div class="lane">1</div>
+                  <div class="lane">2</div>
+                  <div class="lane">3</div>
+                  <div class="lane best">4<span class="absolute -top-2 -right-2 bg-alert text-[8px] font-extrabold px-1.5 py-0.5 rounded-full" style="color:#1A0F00;">FAST</span></div>
+                  <div class="lane">5</div>
+                  <div class="lane">6</div>
+                </div>
+                <div class="mt-2 text-xs font-semibold text-success">Lane 4 · FASTEST — 12s avg wait</div>
+              </div>
+
+              <div class="mt-5 text-center">
+                <div class="display text-base font-extrabold text-highway">You're cleared for Lakhanpur Toll.</div>
+                <div class="text-xs text-highway2/70 mt-1">Approaching in 3, 2, 1…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ====== Scene 5: Passing Toll ====== -->
+          <div id="scene-toll" class="scene">
+            <div class="map">
+              <div class="road"><div class="lane-dashes" style="animation-duration: 0.6s;"></div></div>
+              <div style="position:absolute; top:42%; right:18%;">
+                <svg viewBox="0 0 80 60" width="120" height="90">
+                  <rect x="0"  y="20" width="80" height="10" rx="2" fill="#0B2545"/>
+                  <rect x="6"  y="30" width="6"  height="22" fill="#0B2545"/>
+                  <rect x="68" y="30" width="6"  height="22" fill="#0B2545"/>
+                  <rect x="14" y="30" width="52" height="18" rx="1.5" fill="#fff" stroke="#0B2545" stroke-width="2"/>
+                  <text x="40" y="42" text-anchor="middle" font-size="9" font-weight="800" fill="#0B2545" font-family="Plus Jakarta Sans">LAKHANPUR</text>
+                  <rect x="0"  y="52" width="80" height="5" fill="#13315C"/>
+                </svg>
+                <div class="barrier" id="barrier" style="position:absolute; top:50%; left:6px;"></div>
+              </div>
+
+              <div id="sumo" style="position:absolute; top: calc(55% + 8px); left: 20%; transform: translateY(-50%); transition: left 3s cubic-bezier(.4,.05,.4,1);">
+                <svg viewBox="0 0 60 30" width="64" height="32">
+                  <rect x="2"  y="10" width="56" height="14" rx="3" fill="#0B2545"/>
+                  <rect x="10" y="6"  width="40" height="8"  rx="2" fill="#13315C"/>
+                  <rect x="14" y="8"  width="14" height="6"  rx="1" fill="#7FB3D5"/>
+                  <rect x="32" y="8"  width="14" height="6"  rx="1" fill="#7FB3D5"/>
+                  <circle cx="14" cy="26" r="4" fill="#1A1F2B"/>
+                  <circle cx="46" cy="26" r="4" fill="#1A1F2B"/>
+                  <rect x="50" y="14" width="6" height="3" rx="0.5" fill="#F4A261"/>
+                </svg>
+              </div>
+
+              <div id="tagRead" class="absolute" style="top: 30%; left: 50%; transform: translate(-50%, -50%); opacity:0; transition: opacity 0.3s ease;">
+                <div class="px-3 py-1.5 rounded-full font-extrabold text-xs text-white mono" style="background: var(--success); box-shadow: 0 8px 20px -4px rgba(6,167,125,0.5);">
+                  ✓ TAG READ · ₹95 DEBITED
+                </div>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-highway2/70">Passing Through</div>
+              <div class="font-extrabold text-base text-highway mt-0.5">Lakhanpur Toll · Lane 4</div>
+              <div class="text-xs text-highway2 mt-1">Tag scanned automatically. No stopping needed.</div>
+            </div>
+          </div>
+
+          <!-- ====== Scene 6: Chain Reaction Card ====== -->
+          <div id="scene-stat" class="scene">
+            <div class="absolute inset-0" style="background: linear-gradient(180deg, #FAFAF7 0%, #E8F3EC 100%);"></div>
+            <div class="relative h-full flex flex-col px-5 pt-16 pb-5">
+              <div class="text-center mb-4">
+                <div class="text-[10px] font-extrabold uppercase tracking-[0.15em] text-success">Chain Reaction</div>
+                <h2 class="display text-2xl font-extrabold text-highway mt-1">Prevented.</h2>
+              </div>
+
+              <div class="stat-card">
+                <div class="space-y-4">
+                  <div>
+                    <div class="mono text-4xl font-extrabold" id="stat1">0</div>
+                    <div class="text-xs font-semibold opacity-90 mt-1">cars not delayed behind you</div>
+                  </div>
+                  <div class="h-px bg-white/20"></div>
+                  <div>
+                    <div class="mono text-4xl font-extrabold"><span id="stat2">0</span> <span class="text-xl">min</span></div>
+                    <div class="text-xs font-semibold opacity-90 mt-1">saved across the highway</div>
+                  </div>
+                  <div class="h-px bg-white/20"></div>
+                  <div>
+                    <div class="mono text-4xl font-extrabold"><span id="stat3">0</span> <span class="text-xl">kg CO₂</span></div>
+                    <div class="text-xs font-semibold opacity-90 mt-1">emissions prevented</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-auto">
+                <button id="replayBtn" class="cta">↻ Replay Demo</button>
+                <div class="text-center text-[10px] text-highway2/60 mt-2">Built with FASTag Chain Reaction · Driver App</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile-only connector -->
+    <div class="meanwhile">↓ Meanwhile, on the other phone… ↓</div>
+
+    <!-- ===== SECOND PHONE (without our app) ===== -->
+    <div class="phone-col">
+      <div class="phone-badge bad">✕ Without our app</div>
+
+      <div id="phoneWrap2" class="phone small alt-timeline">
+        <div class="notch">
+          <div class="cam"></div>
+          <div class="speaker"></div>
+          <div class="cam"></div>
+        </div>
+        <div class="phone-screen" id="screen2">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span class="mono">9:41 AM</span>
+            <div class="flex items-center gap-1.5">
+              <svg width="14" height="10" viewBox="0 0 16 11"><g fill="#0B2545"><rect x="0"  y="7" width="3" height="4" rx="0.5"/><rect x="4"  y="5" width="3" height="6" rx="0.5"/><rect x="8"  y="3" width="3" height="8" rx="0.5"/><rect x="12" y="0" width="3" height="11" rx="0.5"/></g></svg>
+              <svg width="22" height="10" viewBox="0 0 26 12"><rect x="0.5" y="0.5" width="22" height="11" rx="2.5" fill="none" stroke="#0B2545" opacity="0.6"/><rect x="2"   y="2"   width="18" height="8"  rx="1" fill="#0B2545"/></svg>
+            </div>
+          </div>
+
+          <!-- Driving scene (mirror) -->
+          <div id="scene-drive-2" class="scene active">
+            <div class="map">
+              <div class="road"><div class="lane-dashes" id="laneDashes2"></div></div>
+              <div class="traffic-layer" id="trafficLayer2"></div>
+              <div class="you-dot"></div>
+              <div id="tollIcon2" class="toll-icon">
+                <svg viewBox="0 0 48 48" width="100%" height="100%">
+                  <rect x="6"  y="22" width="36" height="6" rx="1.5" fill="#0B2545"/>
+                  <rect x="10" y="28" width="4"  height="14" fill="#0B2545"/>
+                  <rect x="34" y="28" width="4"  height="14" fill="#0B2545"/>
+                  <rect x="14" y="28" width="20" height="10" rx="1" fill="#fff" stroke="#0B2545" stroke-width="1.5"/>
+                  <text x="24" y="36" text-anchor="middle" font-size="6" font-weight="800" fill="#0B2545" font-family="Plus Jakarta Sans">TOLL</text>
+                  <rect x="6"  y="40" width="36" height="3" fill="#13315C"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="flex items-start justify-between mb-1.5">
+                <div>
+                  <div class="text-[9px] font-bold uppercase tracking-[0.1em] text-highway2/70">Driving</div>
+                  <div class="font-extrabold text-xs text-highway mt-0.5">Srinagar → Jammu</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[9px] font-bold uppercase tracking-[0.1em] text-highway2/70">Speed</div>
+                  <div class="font-extrabold text-xs text-highway mt-0.5 mono">82 <span class="font-semibold">km/h</span></div>
+                </div>
+              </div>
+              <div class="h-px bg-highway/10 my-1.5"></div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-[9px] font-bold uppercase tracking-[0.1em] text-highway2/70">FASTag</div>
+                  <div class="mono text-lg font-extrabold text-highway mt-0.5">₹47</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[9px] font-bold uppercase tracking-[0.1em] text-highway2/70">Next Toll</div>
+                  <div class="font-bold text-xs text-highway mt-0.5">Lakhanpur · <span id="distVal2" class="mono">8.0</span> km</div>
+                </div>
+              </div>
+              <div class="mt-2 text-[10px] text-highway2/60 italic">No alerts. No app.</div>
+            </div>
+
+            <!-- Disaster overlay -->
+            <div id="disasterOverlay" class="disaster-overlay">
+              <div class="text-center font-extrabold text-base mb-1">✕ Tag Declined</div>
+              <div class="text-center text-xs opacity-90 mb-4">Manual Payment Required</div>
+
+              <div class="text-center mb-1">
+                <div class="text-[10px] uppercase font-bold tracking-[0.15em] opacity-85">Cars stuck behind you</div>
+              </div>
+              <div class="text-center stuck-counter mt-1 mb-3" id="stuckCounter">1</div>
+
+              <div class="disaster-stats">
+                <div>Avg delay per driver: <span class="mono">3.1 min</span></div>
+                <div>Estimated fuel wasted: <span class="mono">₹4,260</span></div>
+                <div>Ambulance stuck: <span class="mono">1</span></div>
+              </div>
+
+              <div id="finalDisasterCard" class="final-disaster-card" style="display:none;">
+                <div class="text-base font-extrabold leading-tight"><span class="mono">71</span> vehicles delayed.</div>
+                <div class="text-xs font-semibold mt-1">₹4,260 collective fuel wasted. 9 minutes lost.</div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="scrubber"><div id="progressBar"></div></div>
+  <div class="scene-label" id="sceneLabel">SCENE 1 · Driving · 0:00 / 0:55</div>
+
+</main>
+
+<footer class="max-w-6xl mx-auto px-6 pb-10 text-center">
+  <p class="text-xs text-highway2/70">Built for <span class="font-bold text-highway">Smart India Hackathon</span> · Team Chinar · One driver. One recharge. One chain reaction prevented.</p>
+</footer>
+
+<button id="soundToggle" class="sound-toggle" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+
+<script>
+// ===================== State & Audio =====================
+const state = {
+  t: 0,                    // master clock seconds
+  distance: 8.0,           // km to toll
+  scene: 'drive',
+  scene2: 'drive',         // bad-phone scene
+  alertFired: false,
+  ctaTapped: false,
+  upiTapped: false,
+  arrived: false,
+  disasterShown: false,
+  hornFired: false,
+  done: false,
+  soundOn: true,
+  audioUnlocked: false,
+  selectedAmt: 500,
+  selectedUpi: 'Google Pay',
+};
+
+let audioCtx = null;
+function unlockAudio() {
+  if (state.audioUnlocked) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    state.audioUnlocked = true;
+  } catch (e) { /* no audio */ }
+}
+function chime(notes, dur=0.18, type='sine', gain=0.18) {
+  if (!state.soundOn || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const g   = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, now + i*dur);
+    g.gain.linearRampToValueAtTime(gain, now + i*dur + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + i*dur + dur);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(now + i*dur);
+    osc.stop(now + i*dur + dur + 0.02);
+  });
+}
+const alertChime   = () => chime([880, 740, 620], 0.16, 'sine',     0.18);
+const successChime = () => chime([523, 659, 784, 1046], 0.14, 'triangle', 0.16);
+const boopChime    = () => chime([1200], 0.08, 'square', 0.12);
+
+// Car horn (saw wave, descending 220 → 180)
+function carHorn() {
+  if (!state.soundOn || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g   = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(220, now);
+  osc.frequency.linearRampToValueAtTime(180, now + 0.5);
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.18, now + 0.05);
+  g.gain.linearRampToValueAtTime(0.18, now + 0.45);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.6);
+}
+
+// ===================== DOM refs =====================
+const $ = (id) => document.getElementById(id);
+const screenEl    = $('screen');
+const alertBanner = $('alertBanner');
+const tollIcon    = $('tollIcon');
+const tollIcon2   = $('tollIcon2');
+const balancePill = $('balancePill');
+const balanceVal  = $('balanceVal');
+const distVal     = $('distVal');
+const distVal2    = $('distVal2');
+const alertDist   = $('alertDist');
+const rechargeBtn = $('rechargeBtn');
+const backdrop    = $('backdrop');
+const upiSheet    = $('upiSheet');
+const upiAuth     = $('upiAuthorizing');
+const upiChoice   = $('upiChoice');
+const checkCircle = $('checkCircle');
+const confettiBox = $('confettiBox');
+const barrier     = $('barrier');
+const sumo        = $('sumo');
+const tagRead     = $('tagRead');
+const progressBar = $('progressBar');
+const sceneLabel  = $('sceneLabel');
+const phoneWrap   = $('phoneWrap');
+const phoneWrap2  = $('phoneWrap2');
+const laneDashes  = $('laneDashes');
+const laneDashes2 = $('laneDashes2');
+const disasterOverlay = $('disasterOverlay');
+const stuckCounter    = $('stuckCounter');
+const finalDisasterCard = $('finalDisasterCard');
+
+const TOTAL = 55; // total demo duration ballpark
+
+// ===================== Traffic (other cars) =====================
+// Each car: { el, lane (0=top,1=bottom of road), pos (0..100 % along road, with YOU at ~50%) }
+// "pos" relative to road; we offset it by an internal scroll variable to simulate movement.
+const CARS_CONFIG = [
+  { color: 'blue',  lane: 0, base: 25 },  // ahead
+  { color: 'green', lane: 1, base: 32 },  // ahead
+  { color: 'grey',  lane: 0, base: 40 },  // ahead
+  { color: 'white', lane: 1, base: 64 },  // behind
+  { color: 'blue2', lane: 0, base: 72 },  // behind
+  { color: 'grey2', lane: 1, base: 82 },  // behind
+];
+
+function buildTraffic(layerEl) {
+  layerEl.innerHTML = '';
+  const cars = [];
+  CARS_CONFIG.forEach((cfg) => {
+    const el = document.createElement('div');
+    el.className = `car ${cfg.color}`;
+    // lane 0 ~ upper half of road, lane 1 ~ lower half
+    el.style.top = (cfg.lane === 0 ? 22 : 56) + 'px';
+    layerEl.appendChild(el);
+    cars.push({ el, base: cfg.base });
+  });
+  return cars;
+}
+
+let cars1 = [];
+let cars2 = [];
+
+// scroll offset (px) - drives road dashes + car positions
+let scrollOffset = 0;
+
+function positionCars(carList, offsetPx, widthPx) {
+  // YOU stays at center (50% of phone). Toll is anchored at right edge.
+  // Cars move LEFT relative to the road as the road scrolls.
+  carList.forEach(({ el, base }) => {
+    // base 0..100 % along road; shift by scroll offset wrapped at width
+    const wrapped = ((base / 100) * widthPx - offsetPx) % widthPx;
+    const x = (wrapped + widthPx) % widthPx;
+    el.style.left = x + 'px';
+  });
+}
+
+// ===================== Scene helpers =====================
+function showScene(name) {
+  state.scene = name;
+  ['drive','success','toll','stat'].forEach(s => {
+    const el = $('scene-' + s);
+    if (el) el.classList.toggle('active', s === name);
+  });
+}
+
+function updateLabel() {
+  const mins = Math.floor(state.t/60), secs = Math.floor(state.t%60);
+  const tot  = `0:${String(Math.floor(TOTAL%60)).padStart(2,'0')}`;
+  const cur  = `${mins}:${String(secs).padStart(2,'0')}`;
+  const sceneName = {
+    drive: 'SCENE · Driving',
+    success: 'SCENE · Recharge Confirmed',
+    toll: 'SCENE · Passing Toll',
+    stat: 'SCENE · Chain Reaction Prevented',
+  }[state.scene] || 'DEMO';
+  sceneLabel.textContent = `${sceneName} · ${cur} / ${tot}`;
+  progressBar.style.width = Math.min(100, (state.t/TOTAL)*100) + '%';
+}
+
+function setDistance(km) {
+  const clamped = Math.max(0, km);
+  distVal.textContent   = clamped.toFixed(1);
+  if (distVal2) distVal2.textContent = clamped.toFixed(1);
+  alertDist.textContent = clamped.toFixed(1);
+
+  // Grow toll icon as we approach: scale 1.0 (at 8km) → 1.25 (at 0km)
+  const journey = 8.0;
+  const progress = Math.min(1, Math.max(0, (journey - clamped) / journey));
+  const scale = 1.0 + progress * 0.25;
+  tollIcon.style.transform = `translateY(-50%) scale(${scale})`;
+  if (tollIcon2) tollIcon2.style.transform = `translateY(-50%) scale(${scale})`;
+}
+
+function fireAlert() {
+  if (state.alertFired) return;
+  state.alertFired = true;
+  phoneWrap.classList.add('shake');
+  setTimeout(() => phoneWrap.classList.remove('shake'), 600);
+  alertChime();
+  alertBanner.classList.add('show');
+  tollIcon.classList.add('alerting');
+  balancePill.classList.add('alerting');
+  rechargeBtn.classList.remove('hidden');
+}
+
+function openSheet() {
+  if (state.ctaTapped) return;
+  state.ctaTapped = true;
+  backdrop.classList.add('show');
+  upiSheet.classList.add('show');
+}
+function closeSheet() {
+  backdrop.classList.remove('show');
+  upiSheet.classList.remove('show');
+}
+
+function tapUpi(name, rowEl) {
+  if (state.upiTapped) return;
+  state.upiTapped = true;
+  state.selectedUpi = name;
+  upiChoice.textContent = name;
+  if (rowEl) rowEl.classList.add('pressed');
+  upiAuth.classList.remove('hidden');
+
+  setTimeout(() => {
+    closeSheet();
+    goSuccess();
+  }, 1800);
+}
+
+function goSuccess() {
+  showScene('success');
+  alertBanner.classList.remove('show');
+  tollIcon.classList.remove('alerting');
+  balancePill.classList.remove('alerting');
+  balanceVal.textContent = '547';
+
+  checkCircle.classList.remove('pop');
+  void checkCircle.offsetWidth;
+  checkCircle.classList.add('pop');
+
+  setTimeout(successChime, 100);
+  spawnConfetti();
+}
+
+function spawnConfetti() {
+  confettiBox.innerHTML = '';
+  const colors = ['#F4A261', '#06A77D', '#0B2545'];
+  for (let i = 0; i < 32; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left  = Math.random() * 100 + '%';
+    c.style.background = colors[i % colors.length];
+    c.style.clipPath   = 'polygon(50% 0%, 100% 100%, 0% 100%)';
+    c.style.animationDelay = (Math.random() * 0.6) + 's';
+    c.style.transform = `rotate(${Math.random()*360}deg)`;
+    confettiBox.appendChild(c);
+    requestAnimationFrame(() => c.classList.add('go'));
+  }
+}
+
+function goToll() {
+  showScene('toll');
+  sumo.style.transition = 'none';
+  sumo.style.left = '20%';
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      sumo.style.transition = 'left 3s cubic-bezier(.4,.05,.4,1)';
+      sumo.style.left = '62%';
+    }, 50);
+  });
+  setTimeout(() => {
+    tagRead.style.opacity = '1';
+    boopChime();
+    barrier.classList.add('up');
+  }, 1600);
+  setTimeout(goStat, 3400);
+}
+
+function goStat() {
+  showScene('stat');
+  animateCount($('stat1'), 0, 180, 1500);
+  animateCount($('stat2'), 0, 9,   1500);
+  animateCount($('stat3'), 0, 14,  1500);
+  state.done = true;
+}
+function animateCount(el, from, to, dur) {
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (to - from) * eased);
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ===================== Disaster (bad phone) =====================
+function triggerDisaster() {
+  if (state.disasterShown) return;
+  state.disasterShown = true;
+  phoneWrap2.classList.add('disaster');
+  disasterOverlay.classList.add('show');
+
+  // Counter ramps 1 → 71 over 12 seconds, easing
+  const start = performance.now();
+  const dur = 12000;
+  function tick(now) {
+    const p = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 2);
+    const val = Math.round(1 + (71 - 1) * eased);
+    stuckCounter.textContent = val;
+    if (p < 1) requestAnimationFrame(tick);
+    else {
+      finalDisasterCard.style.display = 'block';
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+// ===================== Master clock =====================
+// Distance-driven journey with variable speed.
+// - Start at 8.0 km
+// - Pre-alert: ~10s to go from 8.0 → 5.0 (slow, 0.3 km/s)
+// - Alert fires at 5.0 km
+// - User recharges (state pauses during sheet/auth)
+// - Post-recharge: 4.5 → 3.0 normal, 3.0 → 1.0 1.5×, 1.0 → 0 fast (2.5×)
+// Base rate: 0.3 km/s
+function speedMultiplier(km) {
+  if (km > 3.0) return 1.0;
+  if (km > 1.0) return 1.5;
+  return 2.5;
+}
+
+let lastTick = performance.now();
+let tickHandle = null;
+const ROAD_WIDTH = 360; // px reference for car wrapping
+const ROAD_WIDTH_SMALL = 280;
+
+function startClock() {
+  lastTick = performance.now();
+  cancelAnimationFrame(tickHandle);
+  const loop = (now) => {
+    const dt = (now - lastTick) / 1000;
+    lastTick = now;
+
+    // Master clock always ticks (for label/progress)
+    state.t = Math.min(TOTAL, state.t + dt);
+
+    // Driving advances distance — but paused during UPI sheet and after arrival
+    const drivingActiveMain = (state.scene === 'drive' && !state.ctaTapped && !state.arrived);
+    // Bad phone keeps driving regardless of main phone's recharge flow (it's a separate timeline,
+    // but locked to same MASTER clock — both decrement distance at same rate based on master state).
+    // For simplicity: distance is shared. Both phones see same distance.
+
+    if (drivingActiveMain && state.distance > 0) {
+      const baseRate = 0.30; // km/s
+      const km = Math.max(0, state.distance);
+      state.distance = Math.max(0, state.distance - baseRate * speedMultiplier(km) * dt);
+      setDistance(state.distance);
+
+      // Scroll the road dashes & cars based on a speed proxy
+      const scrollSpeed = 120 * speedMultiplier(km); // px/s
+      scrollOffset += scrollSpeed * dt;
+      // Update dash animation speed
+      const dashDur = (1.4 / speedMultiplier(km)).toFixed(2);
+      if (laneDashes)  laneDashes.style.animationDuration  = dashDur + 's';
+      if (laneDashes2) laneDashes2.style.animationDuration = dashDur + 's';
+      // Update car positions
+      positionCars(cars1, scrollOffset, ROAD_WIDTH);
+      positionCars(cars2, scrollOffset, ROAD_WIDTH_SMALL);
+    }
+
+    // Fire alert when distance crosses 5.0 km
+    if (state.scene === 'drive' && !state.alertFired && state.distance <= 5.0) {
+      fireAlert();
+    }
+
+    // Auto-open sheet ~3s after alert fires (gives user time to see)
+    // ctaTapped is set by openSheet; if user doesn't tap, we auto-open
+    if (state.scene === 'drive' && state.alertFired && !state.ctaTapped) {
+      if (!state._alertAt) state._alertAt = state.t;
+      if (state.t - state._alertAt > 3.0) openSheet();
+    }
+
+    // Auto-tap GPay ~2.5s after sheet opens (if user doesn't)
+    if (state.scene === 'drive' && state.ctaTapped && !state.upiTapped) {
+      if (!state._sheetAt) state._sheetAt = state.t;
+      if (state.t - state._sheetAt > 2.5) {
+        const gpayRow = document.querySelector('[data-upi="Google Pay"]');
+        tapUpi('Google Pay', gpayRow);
+      }
+    }
+
+    // While UPI sheet is open / recharging, bad phone keeps driving (real time).
+    // We decrement distance even when main is paused, so bad phone keeps moving.
+    if (state.ctaTapped && !state.arrived && state.distance > 0) {
+      // Main phone is paused on recharge; advance distance at 1.0× for the bad-phone reality
+      const km = Math.max(0, state.distance);
+      state.distance = Math.max(0, state.distance - 0.30 * speedMultiplier(km) * dt);
+      setDistance(state.distance);
+      scrollOffset += 120 * speedMultiplier(km) * dt;
+      positionCars(cars1, scrollOffset, ROAD_WIDTH);
+      positionCars(cars2, scrollOffset, ROAD_WIDTH_SMALL);
+    }
+
+    // Arrival — only after recharge has happened on main phone
+    if (!state.arrived && state.distance <= 0 && state.scene === 'success') {
+      state.arrived = true;
+      // Bad-phone disaster fires NOW (barrier stays down)
+      if (!state.disasterShown) {
+        if (!state.hornFired) { carHorn(); state.hornFired = true; }
+        triggerDisaster();
+      }
+      // Main phone transitions into the toll-pass scene
+      setTimeout(goToll, 600);
+    }
+
+    // Edge case: distance hits 0 before recharge finishes (bad UX scenario)
+    if (!state.arrived && state.distance <= 0 && state.scene === 'drive') {
+      // Force the flow: snap to success then arrival
+      state.arrived = true;
+      if (!state.disasterShown) {
+        if (!state.hornFired) { carHorn(); state.hornFired = true; }
+        triggerDisaster();
+      }
+      // If user never recharged, still show success (demo path is fixed)
+      if (!state.upiTapped) {
+        const gpayRow = document.querySelector('[data-upi="Google Pay"]');
+        if (state.ctaTapped) tapUpi('Google Pay', gpayRow);
+      }
+      setTimeout(goToll, 800);
+    }
+
+    updateLabel();
+    tickHandle = requestAnimationFrame(loop);
+  };
+  tickHandle = requestAnimationFrame(loop);
+}
+
+// ===================== Reset / Skip / Replay =====================
+function resetDemo() {
+  state.t = 0;
+  state.distance = 8.0;
+  state.scene = 'drive';
+  state.scene2 = 'drive';
+  state.alertFired = false;
+  state.ctaTapped  = false;
+  state.upiTapped  = false;
+  state.arrived    = false;
+  state.disasterShown = false;
+  state.hornFired  = false;
+  state.done       = false;
+  state._alertAt   = null;
+  state._sheetAt   = null;
+  state.selectedAmt = 500;
+  state.selectedUpi = 'Google Pay';
+
+  setDistance(8.0);
+  balanceVal.textContent = '47';
+  balancePill.classList.remove('alerting');
+  alertBanner.classList.remove('show');
+  tollIcon.classList.remove('alerting');
+  rechargeBtn.classList.add('hidden');
+  closeSheet();
+  upiAuth.classList.add('hidden');
+  document.querySelectorAll('.upi-row.pressed').forEach(r => r.classList.remove('pressed'));
+  document.querySelectorAll('.amount-tile').forEach(t => t.classList.toggle('selected', t.dataset.amt === '500'));
+  checkCircle.classList.remove('pop');
+  confettiBox.innerHTML = '';
+  barrier.classList.remove('up');
+  tagRead.style.opacity = '0';
+  sumo.style.transition = 'none';
+  sumo.style.left = '20%';
+
+  // Bad phone reset
+  phoneWrap2.classList.remove('disaster');
+  disasterOverlay.classList.remove('show');
+  finalDisasterCard.style.display = 'none';
+  stuckCounter.textContent = '1';
+
+  // Rebuild traffic
+  cars1 = buildTraffic($('trafficLayer'));
+  cars2 = buildTraffic($('trafficLayer2'));
+  scrollOffset = 0;
+  positionCars(cars1, 0, ROAD_WIDTH);
+  positionCars(cars2, 0, ROAD_WIDTH_SMALL);
+
+  ['stat1','stat2','stat3'].forEach(id => $(id).textContent = '0');
+  showScene('drive');
+  updateLabel();
+  startClock();
+}
+
+function skipToAlert() {
+  // Jump to just before alert: distance = 5.1 km
+  state.distance = 5.1;
+  state.alertFired = false;
+  state._alertAt = null;
+  setDistance(5.1);
+  updateLabel();
+}
+
+// ===================== Wire up =====================
+$('resetBtn').addEventListener('click', resetDemo);
+$('skipBtn').addEventListener('click', skipToAlert);
+$('replayBtn').addEventListener('click', resetDemo);
+
+rechargeBtn.addEventListener('click', () => {
+  unlockAudio();
+  openSheet();
+});
+
+document.querySelectorAll('.amount-tile').forEach(tile => {
+  tile.addEventListener('click', () => {
+    document.querySelectorAll('.amount-tile').forEach(t => t.classList.remove('selected'));
+    tile.classList.add('selected');
+    state.selectedAmt = parseInt(tile.dataset.amt, 10);
+  });
+});
+
+document.querySelectorAll('.upi-row').forEach(row => {
+  row.addEventListener('click', () => {
+    unlockAudio();
+    tapUpi(row.dataset.upi, row);
+  });
+});
+
+$('soundToggle').addEventListener('click', () => {
+  state.soundOn = !state.soundOn;
+  $('soundToggle').textContent = state.soundOn ? '🔊' : '🔇';
+  if (state.soundOn) unlockAudio();
+});
+
+screenEl.addEventListener('click', unlockAudio);
+document.addEventListener('click', unlockAudio, { once: true });
+
+// Boot
+resetDemo();
+</script>
+</body>
+</html>

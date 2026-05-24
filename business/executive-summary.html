@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FASTag Chain Reaction — Executive Summary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --highway-blue: #0B2545;
+    --ink: #1A1A1A;
+    --rule: #C9CED6;
+    --muted: #4A5568;
+    --accent: #D97706;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm 14mm 12mm 14mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ECEEF1;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
+    font-size: 10pt;
+    line-height: 1.38;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 12mm 14mm;
+    margin: 18px auto;
+    background: #FFFFFF;
+    box-shadow: 0 4px 24px rgba(11, 37, 69, 0.10);
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid var(--highway-blue);
+    padding-bottom: 7px;
+    margin-bottom: 9px;
+  }
+  .brand-left { display: flex; align-items: center; gap: 11px; }
+  .logo {
+    width: 36px; height: 36px;
+    background: var(--highway-blue);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Serif', serif;
+    font-weight: 700;
+    font-size: 17pt;
+    border-radius: 4px;
+    letter-spacing: -0.5px;
+  }
+  .brand-text h1 {
+    margin: 0;
+    font-family: 'IBM Plex Serif', serif;
+    color: var(--highway-blue);
+    font-size: 17pt;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    line-height: 1.05;
+  }
+  .brand-text .tagline {
+    margin-top: 1px;
+    font-size: 8.8pt;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .brand-text .valueprop {
+    margin-top: 2px;
+    font-size: 9pt;
+    color: var(--ink);
+    max-width: 360px;
+  }
+  .meta {
+    text-align: right;
+    font-size: 8pt;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .meta strong { color: var(--ink); }
+
+  /* Sections */
+  section { margin-top: 8px; }
+  h2 {
+    font-family: 'Inter', sans-serif;
+    color: var(--highway-blue);
+    font-size: 10.2pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin: 0 0 3px 0;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 2px;
+  }
+  p { margin: 0 0 4px 0; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .stat {
+    display: inline;
+    color: var(--highway-blue);
+    font-weight: 700;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 11px;
+    padding-top: 6px;
+    border-top: 1px solid var(--rule);
+    font-size: 7.8pt;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer .links { font-family: 'Inter', monospace; }
+  .footer .conf { font-style: italic; }
+
+  @media print {
+    html, body { background: #fff; }
+    .page { box-shadow: none; margin: 0; width: auto; min-height: auto; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand-left">
+      <div class="logo">FC</div>
+      <div class="brand-text">
+        <h1>FASTag Chain Reaction</h1>
+        <div class="tagline">Stop the wave before it starts.</div>
+        <div class="valueprop">A 5km pre-toll FASTag readiness layer that prevents queue cascades at Indian toll plazas.</div>
+      </div>
+    </div>
+    <div class="meta">
+      <strong>Executive Summary</strong><br>
+      24 May 2026<br>
+      [Founder Name]<br>
+      [email] · [phone]
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section>
+    <h2>The Problem</h2>
+    <p>A single stopped vehicle at an Indian toll plaza propagates a backward shockwave that delays <span class="stat">200+ vehicles</span> per incident. NHAI's MLFF baseline alone implies <span class="stat">₹1,500 Cr/year of avoidable fuel waste</span> from toll-induced idling and stop-and-go cycles. <span class="stat">49% of fatal Indian highway crashes are rear-end collisions</span>, disproportionately clustered in the 2-km approach to toll plazas. The root cause is not the barrier — it is the small population of FASTags that are low-balance, blacklisted, KYC-incomplete, or vehicle-class-mismatched and only discover this <em>at the lane</em>.</p>
+  </section>
+
+  <!-- SOLUTION -->
+  <section>
+    <h2>Our Solution</h2>
+    <p>A driver-side mobile app that performs a <strong>5km pre-toll readiness check</strong> across <strong>all 30+ issuer banks</strong> — balance, blacklist (NPCI status code 176), KYC tier, and vehicle-class mapping — and resolves issues via UPI Intent recharge or in-app dispute flow before the driver reaches the plaza. The wave never forms. <strong>Differentiator:</strong> every existing alert is single-bank and time-based (Paytm tells Paytm users about Paytm tags). Ours is <strong>location-triggered and cross-bank</strong>, with a concessionaire dashboard that converts driver-side prevention into measurable plaza-side throughput.</p>
+  </section>
+
+  <!-- WHY NOW -->
+  <section>
+    <h2>Why Now</h2>
+    <p><span class="stat">11+ crore active FASTags</span> and ~98% highway penetration mean the addressable user base is already in place. <strong>NPCI's February 2025 rule (status code 176)</strong> introduced a hard 2× penalty for blacklisted-tag transactions — drivers now have a concrete financial reason to pre-check. <strong>UPI Intent</strong> has collapsed recharge into a one-tap action. The <strong>MLFF transition (2026-2028)</strong> removes the physical barrier and makes real-time readiness the entire user experience — a market category that did not exist 18 months ago.</p>
+  </section>
+
+  <!-- TRACTION + BUSINESS MODEL -->
+  <div class="two-col">
+    <section style="margin-top:0;">
+      <h2>Traction</h2>
+      <p>Working prototype: Android app, geofencing engine, FastAPI backend, ML wait-time model on synthetic + scraped toll data, and a <strong>Nagel-Schreckenberg physics simulator</strong> quantifying cascade dynamics under varying readiness rates. <strong>Khalapur Toll pilot proposal</strong> drafted with NHAI-ready outcomes framework. NPCI integration spec complete. Excalidraw demo and live dashboard prepared for stakeholder walkthroughs.</p>
+    </section>
+
+    <section style="margin-top:0;">
+      <h2>Business Model</h2>
+      <p><strong>Drivers:</strong> free — ads + UPI recharge MDR share. <strong>Fleets:</strong> ₹99/vehicle/month with compliance reporting and driver scorecards. <strong>Concessionaires / NHAI:</strong> ₹15-25 lakh/year per plaza for the operator dashboard. <strong>Year-3 ARR base case: ~₹32 cr</strong> (Conservative ₹14 cr / Aggressive ₹72 cr — see <em>business-model-canvas.md</em>).</p>
+    </section>
+  </div>
+
+  <!-- THE ASK -->
+  <section>
+    <h2>The Ask</h2>
+    <p><strong>Operators:</strong> a 90-day pilot at Khalapur Toll at <strong>zero cost to NHAI</strong>, instrumented with pre/post wave-formation metrics, fuel-loss estimates, and lane-throughput deltas. <strong>Investors:</strong> seed round of <strong>~₹3 cr for 18 months</strong> to harden integrations across the top 5 issuer banks, ship the concessionaire dashboard to GA, and reach Series A milestones (250K MAU, 2 signed concessionaires, NHAI MoU).</p>
+  </section>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="links">github.com/[org]/fastag-chain-reaction · demo: [url] · deck: [url]</div>
+    <div class="conf">Confidential — for pilot &amp; investor review</div>
+  </div>
+
+</div>
+</body>
+</html>

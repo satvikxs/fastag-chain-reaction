@@ -1,0 +1,399 @@
+{
+  "_meta": {
+    "api": "FCM HTTP v1 (https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send)",
+    "auth": "OAuth2 bearer token from service account",
+    "notes": [
+      "Each example shows the `message` body posted to FCM.",
+      "`data` values must be strings (FCM constraint). Parse JSON on client.",
+      "`android.notification.channel_id` references channels the client creates at install.",
+      "`apns.headers.apns-priority: 10` for immediate, 5 for power-conserving.",
+      "`interruption-level: time-sensitive` (iOS 15+) bypasses Focus modes including Driving Focus.",
+      "`interruption-level: critical` requires Critical Alerts entitlement from Apple."
+    ]
+  },
+
+  "LOW_BALANCE": {
+    "message": {
+      "token": "{DEVICE_FCM_TOKEN}",
+      "notification": {
+        "title": "Low FASTag balance — plaza ahead",
+        "body": "Kherki Daula in 5 km. Balance ₹40, toll ₹120. Recharge now to avoid blacklist."
+      },
+      "data": {
+        "type": "LOW_BALANCE",
+        "plaza_id": "KHE001",
+        "plaza_name": "Kherki Daula",
+        "distance_km": "5.0",
+        "current_balance": "40",
+        "expected_toll": "120",
+        "shortfall": "80",
+        "deeplink": "fastag://recharge?plaza=KHE001&amount=200",
+        "i18n_key": "alert.low_balance",
+        "i18n_args": "{\"amount\":\"120\",\"plaza\":\"Kherki Daula\",\"balance\":\"40\"}",
+        "sent_at": "2026-05-24T14:32:11Z",
+        "alert_id": "alrt_01HXYZ123"
+      },
+      "android": {
+        "priority": "HIGH",
+        "ttl": "600s",
+        "notification": {
+          "channel_id": "plaza_alerts_high",
+          "click_action": "OPEN_RECHARGE",
+          "color": "#E53935",
+          "icon": "ic_notification_warning",
+          "tag": "low_balance_KHE001",
+          "notification_priority": "PRIORITY_MAX",
+          "visibility": "PUBLIC",
+          "default_sound": true,
+          "default_vibrate_timings": true
+        }
+      },
+      "apns": {
+        "headers": {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+          "apns-collapse-id": "low_balance_KHE001"
+        },
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "Low FASTag balance — plaza ahead",
+              "body": "Kherki Daula in 5 km. Balance ₹40, toll ₹120. Recharge now."
+            },
+            "sound": "default",
+            "badge": 1,
+            "interruption-level": "time-sensitive",
+            "relevance-score": 1.0,
+            "category": "PLAZA_ALERT"
+          }
+        }
+      }
+    }
+  },
+
+  "BLACKLISTED": {
+    "message": {
+      "token": "{DEVICE_FCM_TOKEN}",
+      "notification": {
+        "title": "FASTag BLACKLISTED — do not approach plaza",
+        "body": "Your tag is blacklisted. Toll plaza will reject. Resolve immediately or use cash lane."
+      },
+      "data": {
+        "type": "BLACKLISTED",
+        "tag_id": "34161FA8201234567890ABCD",
+        "reason_code": "INSUFFICIENT_KYC",
+        "reason_text": "KYC documents not updated since 2024-12",
+        "plaza_id": "KHE001",
+        "distance_km": "5.0",
+        "deeplink": "fastag://tag-status?reason=INSUFFICIENT_KYC",
+        "i18n_key": "alert.blacklisted",
+        "i18n_args": "{\"reason\":\"KYC\"}",
+        "alert_id": "alrt_01HXYZ124",
+        "severity": "critical"
+      },
+      "android": {
+        "priority": "HIGH",
+        "ttl": "300s",
+        "notification": {
+          "channel_id": "safety_critical",
+          "color": "#B71C1C",
+          "icon": "ic_notification_blocked",
+          "tag": "blacklist_alert",
+          "notification_priority": "PRIORITY_MAX",
+          "visibility": "PUBLIC",
+          "default_sound": true,
+          "default_vibrate_timings": true,
+          "sticky": true
+        }
+      },
+      "apns": {
+        "headers": {
+          "apns-priority": "10",
+          "apns-push-type": "alert"
+        },
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "FASTag BLACKLISTED",
+              "body": "Plaza in 5 km will reject your tag. Use cash lane or resolve now."
+            },
+            "sound": {
+              "critical": 1,
+              "name": "default",
+              "volume": 1.0
+            },
+            "badge": 1,
+            "interruption-level": "critical",
+            "relevance-score": 1.0,
+            "category": "SAFETY_CRITICAL"
+          }
+        }
+      }
+    }
+  },
+
+  "KYC_EXPIRED": {
+    "message": {
+      "token": "{DEVICE_FCM_TOKEN}",
+      "notification": {
+        "title": "FASTag KYC expires in 7 days",
+        "body": "Update your KYC by 2026-05-31 to avoid tag blacklisting."
+      },
+      "data": {
+        "type": "KYC_EXPIRED",
+        "expiry_date": "2026-05-31",
+        "days_remaining": "7",
+        "deeplink": "fastag://kyc",
+        "i18n_key": "alert.kyc_expiring",
+        "i18n_args": "{\"days\":\"7\",\"date\":\"2026-05-31\"}",
+        "alert_id": "alrt_01HXYZ125"
+      },
+      "android": {
+        "priority": "NORMAL",
+        "ttl": "86400s",
+        "notification": {
+          "channel_id": "account_updates",
+          "color": "#FB8C00",
+          "icon": "ic_notification_info",
+          "tag": "kyc_reminder",
+          "notification_priority": "PRIORITY_DEFAULT",
+          "visibility": "PRIVATE"
+        }
+      },
+      "apns": {
+        "headers": {
+          "apns-priority": "5",
+          "apns-push-type": "alert"
+        },
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "FASTag KYC expires in 7 days",
+              "body": "Update by 2026-05-31 to avoid blacklisting."
+            },
+            "sound": "default",
+            "badge": 1,
+            "interruption-level": "active",
+            "category": "ACCOUNT_UPDATE"
+          }
+        }
+      }
+    }
+  },
+
+  "CLASS_MISMATCH": {
+    "message": {
+      "token": "{DEVICE_FCM_TOKEN}",
+      "notification": {
+        "title": "Vehicle class mismatch on tag",
+        "body": "Tag registered as Car (VC4) but plate scanned as LCV (VC5). Plaza may reject or overcharge."
+      },
+      "data": {
+        "type": "CLASS_MISMATCH",
+        "tag_class": "VC4",
+        "tag_class_label": "Car/Jeep/Van",
+        "detected_class": "VC5",
+        "detected_class_label": "Light Commercial Vehicle",
+        "plaza_id": "KHE001",
+        "distance_km": "5.0",
+        "deeplink": "fastag://tag-status?issue=class_mismatch",
+        "i18n_key": "alert.class_mismatch",
+        "i18n_args": "{\"tag\":\"VC4\",\"detected\":\"VC5\"}",
+        "alert_id": "alrt_01HXYZ126"
+      },
+      "android": {
+        "priority": "HIGH",
+        "ttl": "600s",
+        "notification": {
+          "channel_id": "plaza_alerts_high",
+          "color": "#E53935",
+          "icon": "ic_notification_warning",
+          "tag": "class_mismatch_KHE001",
+          "notification_priority": "PRIORITY_HIGH",
+          "visibility": "PUBLIC",
+          "default_sound": true
+        }
+      },
+      "apns": {
+        "headers": {
+          "apns-priority": "10",
+          "apns-push-type": "alert"
+        },
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "Vehicle class mismatch",
+              "body": "Tag VC4 vs plate VC5. Plaza may reject or overcharge."
+            },
+            "sound": "default",
+            "badge": 1,
+            "interruption-level": "time-sensitive",
+            "relevance-score": 0.9,
+            "category": "PLAZA_ALERT"
+          }
+        }
+      }
+    }
+  },
+
+  "RECHARGE_SUCCESS": {
+    "message": {
+      "token": "{DEVICE_FCM_TOKEN}",
+      "notification": {
+        "title": "Recharge successful",
+        "body": "₹500 added to your FASTag wallet. New balance: ₹540."
+      },
+      "data": {
+        "type": "RECHARGE_SUCCESS",
+        "amount": "500",
+        "new_balance": "540",
+        "transaction_id": "TXN_01HXYZ789",
+        "payment_method": "UPI",
+        "deeplink": "fastag://wallet",
+        "i18n_key": "alert.recharge_success",
+        "i18n_args": "{\"amount\":\"500\",\"balance\":\"540\"}",
+        "alert_id": "alrt_01HXYZ127"
+      },
+      "android": {
+        "priority": "NORMAL",
+        "ttl": "86400s",
+        "notification": {
+          "channel_id": "transactional",
+          "color": "#43A047",
+          "icon": "ic_notification_check",
+          "tag": "recharge_TXN_01HXYZ789",
+          "notification_priority": "PRIORITY_DEFAULT",
+          "visibility": "PRIVATE"
+        }
+      },
+      "apns": {
+        "headers": {
+          "apns-priority": "5",
+          "apns-push-type": "alert"
+        },
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "Recharge successful",
+              "body": "₹500 added. New balance: ₹540."
+            },
+            "sound": "default",
+            "badge": 1,
+            "interruption-level": "active",
+            "category": "TRANSACTIONAL"
+          }
+        }
+      }
+    }
+  },
+
+  "RECHARGE_FAILED": {
+    "message": {
+      "token": "{DEVICE_FCM_TOKEN}",
+      "notification": {
+        "title": "Recharge failed — try again",
+        "body": "₹500 recharge via UPI failed. Bank declined. Retry with another method."
+      },
+      "data": {
+        "type": "RECHARGE_FAILED",
+        "amount": "500",
+        "failure_code": "BANK_DECLINED",
+        "failure_message": "Issuer bank declined the transaction",
+        "transaction_id": "TXN_01HXYZ790",
+        "deeplink": "fastag://recharge?retry=TXN_01HXYZ790",
+        "i18n_key": "alert.recharge_failed",
+        "i18n_args": "{\"amount\":\"500\",\"reason\":\"bank_declined\"}",
+        "alert_id": "alrt_01HXYZ128"
+      },
+      "android": {
+        "priority": "HIGH",
+        "ttl": "3600s",
+        "notification": {
+          "channel_id": "transactional_urgent",
+          "color": "#E53935",
+          "icon": "ic_notification_error",
+          "tag": "recharge_fail_TXN_01HXYZ790",
+          "notification_priority": "PRIORITY_HIGH",
+          "visibility": "PRIVATE",
+          "default_sound": true
+        }
+      },
+      "apns": {
+        "headers": {
+          "apns-priority": "10",
+          "apns-push-type": "alert"
+        },
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "Recharge failed",
+              "body": "Bank declined ₹500 UPI. Retry with another method."
+            },
+            "sound": "default",
+            "badge": 1,
+            "interruption-level": "time-sensitive",
+            "relevance-score": 0.8,
+            "category": "TRANSACTIONAL"
+          }
+        }
+      }
+    }
+  },
+
+  "LANE_SUGGESTION": {
+    "message": {
+      "token": "{DEVICE_FCM_TOKEN}",
+      "notification": {
+        "title": "Use Lane 3 — 4 cars vs 14 in Lane 1",
+        "body": "Kherki Daula approach: Lane 3 (FASTag) clearest. Est. wait 30s."
+      },
+      "data": {
+        "type": "LANE_SUGGESTION",
+        "plaza_id": "KHE001",
+        "plaza_name": "Kherki Daula",
+        "recommended_lane": "3",
+        "lane_type": "FASTAG",
+        "estimated_wait_seconds": "30",
+        "queue_snapshot": "{\"1\":14,\"2\":9,\"3\":4,\"4\":7,\"5\":11}",
+        "distance_km": "1.2",
+        "deeplink": "fastag://lane?plaza=KHE001",
+        "i18n_key": "alert.lane_suggestion",
+        "i18n_args": "{\"lane\":\"3\",\"wait\":\"30\"}",
+        "alert_id": "alrt_01HXYZ129"
+      },
+      "android": {
+        "priority": "HIGH",
+        "ttl": "120s",
+        "notification": {
+          "channel_id": "plaza_alerts_high",
+          "color": "#1E88E5",
+          "icon": "ic_notification_lane",
+          "tag": "lane_KHE001",
+          "notification_priority": "PRIORITY_HIGH",
+          "visibility": "PUBLIC",
+          "default_sound": true
+        }
+      },
+      "apns": {
+        "headers": {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+          "apns-collapse-id": "lane_KHE001"
+        },
+        "payload": {
+          "aps": {
+            "alert": {
+              "title": "Use Lane 3 — clearest",
+              "body": "Kherki Daula: Lane 3 has 4 cars. Est. wait 30s."
+            },
+            "sound": "default",
+            "badge": 1,
+            "interruption-level": "time-sensitive",
+            "relevance-score": 0.95,
+            "category": "PLAZA_ALERT"
+          }
+        }
+      }
+    }
+  }
+}

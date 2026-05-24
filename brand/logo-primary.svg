@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="FASTag Chain Reaction">
+  <title>FASTag Chain Reaction</title>
+  <rect x="0" y="0" width="120" height="120" rx="26" fill="#0B2545"/>
+  <path d="M15 71 C 30 71 30 49 45 49 C 60 49 60 71 75 71 C 90 71 90 49 105 49" fill="none" stroke="#FAFAF7" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="45" cy="49" r="5.5" fill="#06A77D"/>
+  <circle cx="75" cy="71" r="5.5" fill="#06A77D"/>
+  <path d="M26 94 L94 26" stroke="#F4A261" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="94" cy="26" r="6.5" fill="#E63946"/>
+  <text x="146" y="60" font-family="Plus Jakarta Sans, Inter, system-ui, sans-serif" font-size="30" font-weight="700" fill="#0B2545" letter-spacing="-0.5">FASTag</text>
+  <text x="146" y="92" font-family="Plus Jakarta Sans, Inter, system-ui, sans-serif" font-size="20" font-weight="500" fill="#6B7280" letter-spacing="0.2">Chain Reaction</text>
+</svg>

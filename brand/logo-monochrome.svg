@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FASTag Chain Reaction monochrome mark">
+  <title>FASTag Chain Reaction</title>
+  <rect width="64" height="64" rx="14" fill="none"/>
+  <path d="M8 38 C 16 38 16 26 24 26 C 32 26 32 38 40 38 C 48 38 48 26 56 26" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="24" cy="26" r="3" fill="currentColor"/>
+  <circle cx="40" cy="38" r="3" fill="currentColor"/>
+  <path d="M14 50 L50 14" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="50" cy="14" r="3.5" fill="currentColor"/>
+</svg>

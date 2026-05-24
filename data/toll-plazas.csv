@@ -1,0 +1,101 @@
+toll_id,name,highway,state,latitude,longitude,fastag_lanes,opened_year,operator,avg_daily_vehicles
+TP001,Khalapur Toll Plaza,Mumbai-Pune Expressway,Maharashtra,18.8010,73.2852,18,2002,MSRDC / IRB MP Expressway Ltd,150000
+TP002,Talegaon Toll Plaza,Mumbai-Pune Expressway,Maharashtra,18.7139,73.6458,16,2002,MSRDC / IRB MP Expressway Ltd,140000
+TP003,Jewar Toll Plaza,Yamuna Expressway,Uttar Pradesh,28.1147,77.5747,14,2012,Jaypee Infratech (JIL),55000
+TP004,Mathura Toll Plaza,Yamuna Expressway,Uttar Pradesh,27.5410_approx,77.7790_approx,14,2012,Jaypee Infratech (JIL),38000
+TP005,Agra Toll Plaza (Yamuna),Yamuna Expressway,Uttar Pradesh,27.2360_approx,77.9580_approx,12,2012,Jaypee Infratech (JIL),32000
+TP006,Charoti Toll Plaza,NH-48,Maharashtra,19.8905,72.9426,16,2008,IRB Infrastructure,85000
+TP007,Kherki Daula Toll Plaza,NH-48,Haryana,28.3870_approx,76.9080_approx,26,2010,Millennium City Expressways Pvt Ltd (DSC),82000
+TP008,Hilalpur Toll Plaza,Delhi-Mumbai Expressway,Haryana,28.1130_approx,77.0950_approx,20,2023,DME Development Ltd (NHAI SPV),35000
+TP009,Barkapara Toll Plaza,Delhi-Mumbai Expressway,Rajasthan,26.9230_approx,76.8420_approx,18,2023,DME Development Ltd (NHAI SPV),28000
+TP010,Dausa Toll Plaza,Delhi-Mumbai Expressway,Rajasthan,26.8900_approx,76.3300_approx,16,2023,DME Development Ltd (NHAI SPV),30000
+TP011,Kota Toll Plaza,Delhi-Mumbai Expressway,Rajasthan,25.2138_approx,75.8648_approx,16,2024,DME Development Ltd (NHAI SPV),22000
+TP012,Ratlam Toll Plaza,Delhi-Mumbai Expressway,Madhya Pradesh,23.3340_approx,75.0376_approx,14,2024,DME Development Ltd (NHAI SPV),18000
+TP013,Vadodara Toll Plaza (DME),Delhi-Mumbai Expressway,Gujarat,22.3070_approx,73.1810_approx,14,2024,DME Development Ltd (NHAI SPV),20000
+TP014,Kaniminike Toll Plaza,Bengaluru-Mysuru Expressway,Karnataka,12.7820_approx,77.3950_approx,14,2023,NHAI / Dilip Buildcon,75000
+TP015,Sheshagiri Halli Toll Plaza,Bengaluru-Mysuru Expressway,Karnataka,12.6650_approx,77.2280_approx,14,2023,NHAI / Dilip Buildcon,70000
+TP016,Gananguru Toll Plaza,Bengaluru-Mysuru Expressway,Karnataka,12.4310_approx,76.7920_approx,12,2024,NHAI / Dilip Buildcon,55000
+TP017,Krishnagiri Toll Plaza,NH-44,Tamil Nadu,12.5180_approx,78.2120_approx,14,2009,NHAI,68000
+TP018,Hosur Toll Plaza,NH-44,Tamil Nadu,12.7390_approx,77.8270_approx,12,2010,NHAI,72000
+TP019,Hattargi Toll Plaza,NH-48,Karnataka,16.4040_approx,74.5320_approx,12,2012,NHAI,42000
+TP020,Kognoli Toll Plaza,NH-48,Karnataka,16.0560_approx,74.6260_approx,12,2012,NHAI,40000
+TP021,Sambhu Toll Plaza,NH-44,Haryana,30.2240_approx,76.8470_approx,14,2011,NHAI / Soma Isolux,58000
+TP022,Ladowal Toll Plaza,NH-44,Punjab,30.9580_approx,75.7300_approx,14,2008,NHAI,55000
+TP023,Chandimandir Toll Plaza,NH-7,Haryana,30.7560_approx,76.8770_approx,10,2010,NHAI,38000
+TP024,Panipat-Karnal Toll Plaza,NH-44,Haryana,29.5630_approx,76.9620_approx,16,2013,NHAI / Reliance Infrastructure,90000
+TP025,Murthal Toll Plaza,NH-44,Haryana,29.0410_approx,77.1320_approx,14,2011,NHAI,65000
+TP026,Sergarh Toll Plaza,NH-16,Odisha,21.3470_approx,86.8420_approx,12,2010,NHAI / Madhucon Projects,45000
+TP027,Debra Toll Plaza,NH-16,West Bengal,22.3967,87.5232,12,2009,NHAI,52000
+TP028,Rampura Toll Plaza,NH-16,West Bengal,22.0080_approx,87.4030_approx,10,2010,NHAI,38000
+TP029,Tundla Toll Plaza,NH-19,Uttar Pradesh,27.2150_approx,78.2380_approx,12,2009,NHAI / Reliance Infrastructure,55000
+TP030,Kokhraj Toll Plaza,NH-19,Uttar Pradesh,25.5210_approx,81.5410_approx,10,2010,NHAI,42000
+TP031,Daffi Toll Plaza,NH-19,Uttar Pradesh,25.2820_approx,82.9560_approx,8,2012,NHAI,30000
+TP032,Lalanagar Toll Plaza,NH-19,Uttar Pradesh,25.4500_approx,82.4500_approx,10,2011,NHAI,32000
+TP033,Anantram Toll Plaza,NH-19,Uttar Pradesh,26.4630_approx,79.5340_approx,8,2010,NHAI,28000
+TP034,Barajod Toll Plaza,NH-19,Uttar Pradesh,26.6580_approx,79.7710_approx,8,2010,NHAI,25000
+TP035,Bharthana Karjan Toll Plaza,NH-48,Gujarat,21.9460_approx,73.1110_approx,12,2007,NHAI / IRB,50000
+TP036,Choryasi Toll Plaza,NH-48,Gujarat,21.2380_approx,72.9520_approx,12,2008,NHAI / Larsen & Toubro,55000
+TP037,Bhagwada Toll Plaza,NH-48,Gujarat,20.7430_approx,72.8540_approx,12,2009,NHAI / Essel Infraprojects,48000
+TP038,Boriach Toll Plaza,NH-48,Gujarat,21.0410_approx,72.9070_approx,10,2008,NHAI,42000
+TP039,Ahmedabad-Vadodara Toll Plaza,NE-1 (Ahmedabad-Vadodara Expressway),Gujarat,22.4138,73.1494,16,2004,IRB Infrastructure (Vadodara Bharuch Tollway),70000
+TP040,Ahmedabad Ring Road Toll Plaza,NE-1 (Ahmedabad-Vadodara Expressway),Gujarat,22.9760,72.6499,12,2004,IRB Infrastructure,55000
+TP041,Sardewadi Toll Plaza,NH-65 (Pune-Solapur),Maharashtra,17.9160_approx,75.3370_approx,10,2010,IRB Infrastructure,38000
+TP042,Sawaleshwar Toll Plaza,NH-65 (Pune-Solapur),Maharashtra,17.7790_approx,75.7220_approx,8,2010,IRB Infrastructure,30000
+TP043,Varwade Toll Plaza,NH-65 (Pune-Solapur),Maharashtra,18.2240_approx,74.6480_approx,8,2010,IRB Infrastructure,28000
+TP044,Patancheru Toll Plaza,Hyderabad ORR,Telangana,17.5310_approx,78.2660_approx,10,2012,HMDA / IL&FS,32000
+TP045,Shamshabad Toll Plaza,Hyderabad ORR,Telangana,17.2400_approx,78.4290_approx,14,2008,HMDA / IL&FS,65000
+TP046,Medchal Toll Plaza,Hyderabad ORR,Telangana,17.6280_approx,78.4810_approx,8,2013,HMDA / IL&FS,28000
+TP047,Ghatkesar Toll Plaza,Hyderabad ORR,Telangana,17.4470_approx,78.6810_approx,8,2013,HMDA / IL&FS,30000
+TP048,Pedda Amberpet Toll Plaza,Hyderabad ORR,Telangana,17.3320_approx,78.6020_approx,10,2013,HMDA / IL&FS,32000
+TP049,Talapady Toll Plaza,NH-66,Karnataka,12.7980_approx,74.8780_approx,10,2011,NHAI / Navayuga Engineering,38000
+TP050,Hejamady Toll Plaza,NH-66,Karnataka,13.1310_approx,74.7720_approx,10,2012,NHAI / Navayuga Engineering,34000
+TP051,Sasthan Toll Plaza,NH-66,Karnataka,13.4470_approx,74.7440_approx,8,2012,NHAI / Navayuga Engineering,28000
+TP052,Surajbari Toll Plaza,NH-27,Gujarat,23.2240_approx,70.7920_approx,10,2011,NHAI / IRB,28000
+TP053,Bagodara Toll Plaza,NH-47,Gujarat,22.5530_approx,72.0760_approx,10,2012,NHAI,32000
+TP054,Methwada Toll Plaza,NH-46,Madhya Pradesh,22.6970_approx,75.8970_approx,10,2013,NHAI / Reliance Infrastructure,34000
+TP055,Dattigaon Toll Plaza,NH-47,Madhya Pradesh,22.4180_approx,75.6320_approx,8,2014,NHAI,25000
+TP056,Chapra Toll Plaza,NH-52,Madhya Pradesh,23.7820_approx,76.6160_approx,8,2013,NHAI,22000
+TP057,Heeran Khedi Toll Plaza,NH-46,Madhya Pradesh,25.4240_approx,77.6620_approx,8,2014,NHAI,20000
+TP058,Etmadpur Toll Plaza,Agra-Lucknow Expressway,Uttar Pradesh,27.2030_approx,78.1280_approx,12,2017,UPEIDA / IRB,48000
+TP059,Banthra Toll Plaza,Agra-Lucknow Expressway,Uttar Pradesh,26.8260_approx,80.8030_approx,12,2017,UPEIDA,40000
+TP060,Etawah Toll Plaza,Agra-Lucknow Expressway,Uttar Pradesh,26.7820_approx,79.0250_approx,10,2017,UPEIDA,38000
+TP061,Lucknow Toll Plaza (Purvanchal),Purvanchal Expressway,Uttar Pradesh,26.7460_approx,81.3470_approx,12,2021,UPEIDA / Adani Group,42000
+TP062,Sultanpur Toll Plaza,Purvanchal Expressway,Uttar Pradesh,26.2680_approx,82.0710_approx,10,2021,UPEIDA / Adani Group,28000
+TP063,Azamgarh Toll Plaza,Purvanchal Expressway,Uttar Pradesh,26.0680_approx,83.1840_approx,10,2021,UPEIDA / Adani Group,25000
+TP064,Ghazipur Toll Plaza,Purvanchal Expressway,Uttar Pradesh,25.5800_approx,83.5780_approx,10,2021,UPEIDA / Adani Group,22000
+TP065,Sengurichi Toll Plaza,NH-45 (Chennai-Trichy),Tamil Nadu,11.6660_approx,79.0240_approx,10,2010,NHAI,38000
+TP066,Thirumandurai Toll Plaza,NH-45 (Chennai-Trichy),Tamil Nadu,11.2840_approx,78.8810_approx,10,2010,NHAI,35000
+TP067,Athur Toll Plaza,NH-45 (Tambaram-Tindivanam),Tamil Nadu,12.5200_approx,79.9700_approx,12,2008,NHAI,55000
+TP068,Bogalur Toll Plaza,NH-87 (Madurai-Ramanathapuram),Tamil Nadu,9.5840_approx,78.5050_approx,8,2012,NHAI,18000
+TP069,Boothakudi Toll Plaza,NH-45B (Trichy-Madurai),Tamil Nadu,10.3650_approx,78.6940_approx,8,2011,NHAI,22000
+TP070,Kundli Toll Plaza,Eastern Peripheral Expressway,Haryana,28.9080_approx,77.0700_approx,14,2018,NHAI / Jaypee Group,42000
+TP071,Palwal Toll Plaza,Eastern Peripheral Expressway,Haryana,28.1450_approx,77.3290_approx,14,2018,NHAI / Jaypee Group,40000
+TP072,Manesar Toll Plaza,Western Peripheral Expressway,Haryana,28.3540_approx,76.9430_approx,12,2018,NHAI / Essel Infraprojects,35000
+TP073,Bahadurgarh Toll Plaza,Western Peripheral Expressway,Haryana,28.6810_approx,76.9290_approx,10,2018,NHAI / Essel Infraprojects,32000
+TP074,Ghoti Toll Plaza,NH-160 (Nashik-Mumbai),Maharashtra,19.7140_approx,73.6420_approx,10,2010,IRB Infrastructure,38000
+TP075,Vadape Toll Plaza,NH-160 (Mumbai-Nashik),Maharashtra,19.4570_approx,73.0820_approx,10,2010,IRB Infrastructure,42000
+TP076,Sukhpur Toll Plaza,NH-44,Madhya Pradesh,22.8460_approx,77.7820_approx,8,2011,NHAI,25000
+TP077,Bhopal-Dewas Toll Plaza,NH-46,Madhya Pradesh,23.0890_approx,76.6680_approx,8,2012,NHAI,28000
+TP078,Khanapur Toll Plaza,NH-44,Madhya Pradesh,21.6510_approx,77.7240_approx,8,2011,NHAI,22000
+TP079,Bhilad Toll Plaza,NH-48,Gujarat,20.4640_approx,72.9090_approx,10,2008,NHAI / Larsen & Toubro,52000
+TP080,Manor Toll Plaza,NH-48,Maharashtra,19.7240_approx,72.9220_approx,10,2009,IRB Infrastructure,48000
+TP081,Vadodara Bypass Toll Plaza,NH-48,Gujarat,22.2580_approx,73.1810_approx,12,2008,NHAI / IRB,45000
+TP082,Sanand Toll Plaza,NH-47,Gujarat,22.9890_approx,72.3850_approx,10,2013,NHAI,28000
+TP083,Hirebagewadi Toll Plaza,NH-48,Karnataka,15.9700_approx,74.6260_approx,12,2010,NHAI,42000
+TP084,Bankapur Toll Plaza,NH-48,Karnataka,14.9230_approx,75.2710_approx,10,2011,NHAI,32000
+TP085,Chalageri Toll Plaza,NH-48,Karnataka,14.5210_approx,75.7780_approx,8,2012,NHAI,25000
+TP086,Hebbalu Toll Plaza,NH-48,Karnataka,14.1280_approx,76.0050_approx,8,2012,NHAI,22000
+TP087,Devanahalli Toll Plaza,NH-44 (Bengaluru Airport),Karnataka,13.2440_approx,77.7140_approx,10,2008,BIAL / NHAI,38000
+TP088,Electronics City Elevated Toll,NH-44 (Bengaluru),Karnataka,12.8470_approx,77.6620_approx,10,2010,NHAI / Soma Isolux,68000
+TP089,Attibele Toll Plaza,NH-44,Karnataka,12.7820_approx,77.7720_approx,10,2009,NHAI,55000
+TP090,Walayar Toll Plaza,NH-544,Kerala,10.8090_approx,76.8470_approx,10,2011,NHAI,38000
+TP091,Paliyekkara Toll Plaza,NH-544,Kerala,10.4730_approx,76.2310_approx,10,2012,NHAI / Guruvayoor Infrastructure,32000
+TP092,Kumarakom Toll Plaza,NH-66 (Kerala),Kerala,9.6240_approx,76.4290_approx,8,2013,NHAI,22000
+TP093,Sukhpura Toll Plaza,NH-21 (Chandigarh-Manali),Himachal Pradesh,31.4170_approx,76.7610_approx,8,2014,NHAI,18000
+TP094,Pinjore Toll Plaza,NH-5,Himachal Pradesh,30.7920_approx,76.9170_approx,6,2013,NHAI,15000
+TP095,Manauli Toll Plaza,NH-44,Punjab,30.6750_approx,76.6470_approx,10,2011,NHAI,35000
+TP096,Bahalgarh Toll Plaza,NH-44,Haryana,28.9710_approx,77.0710_approx,12,2009,NHAI,55000
+TP097,Sullurpet Toll Plaza,NH-16,Andhra Pradesh,13.7280_approx,80.0080_approx,10,2011,NHAI / GMR,32000
+TP098,Tada Toll Plaza,NH-16,Andhra Pradesh,13.7560_approx,80.0050_approx,10,2010,NHAI / GMR,30000
+TP099,Nellore Toll Plaza,NH-16,Andhra Pradesh,14.4420_approx,79.9870_approx,10,2010,NHAI / GMR,28000
+TP100,Ankapalli Toll Plaza,NH-16,Andhra Pradesh,17.6900_approx,83.0040_approx,10,2011,NHAI,32000

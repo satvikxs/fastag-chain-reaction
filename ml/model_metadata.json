@@ -1,0 +1,68 @@
+{
+  "n_samples": 50000,
+  "test_mae_seconds": 17.357,
+  "test_rmse_seconds": 29.984,
+  "baseline_mae_seconds": 62.493,
+  "lift_vs_baseline_pct": 72.23,
+  "feature_importance": [
+    {
+      "feature": "last_30min_arrival_rate",
+      "importance": 0.48204
+    },
+    {
+      "feature": "historical_avg_last_24h",
+      "importance": 0.2286
+    },
+    {
+      "feature": "fastag_lane_count",
+      "importance": 0.10789
+    },
+    {
+      "feature": "weather_rain",
+      "importance": 0.05518
+    },
+    {
+      "feature": "is_holiday",
+      "importance": 0.03999
+    },
+    {
+      "feature": "toll_id",
+      "importance": 0.03431
+    },
+    {
+      "feature": "last_known_fault",
+      "importance": 0.02399
+    },
+    {
+      "feature": "hour_of_day",
+      "importance": 0.01558
+    },
+    {
+      "feature": "day_of_week",
+      "importance": 0.01242
+    }
+  ],
+  "toll_ids": [
+    "KHE-NH48-01",
+    "MAN-NH48-02",
+    "GHA-NH48-03",
+    "PAN-NH44-04",
+    "MUR-NH44-05",
+    "AGR-NH19-06",
+    "VAD-NH48-07",
+    "PUN-NH48-08"
+  ],
+  "features": [
+    "toll_id",
+    "hour_of_day",
+    "day_of_week",
+    "is_holiday",
+    "weather_rain",
+    "historical_avg_last_24h",
+    "last_30min_arrival_rate",
+    "fastag_lane_count",
+    "last_known_fault"
+  ],
+  "target": "wait_seconds",
+  "model": "RandomForestRegressor(n=180, max_depth=18)"
+}

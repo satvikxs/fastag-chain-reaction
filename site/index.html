@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FASTag Chain Reaction — Stop toll-plaza jams before they form</title>
+  <meta name="description" content="FASTag Chain Reaction is the app that prevents toll-plaza traffic jams in India before they form. Built for the Srinagar–Jammu NH-44 corridor." />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans + Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            highway: '#0B2545',
+            saffron: '#F4A261',
+            success: '#06A77D',
+            cream:   '#FAFAF7',
+            ink:     '#1F2937',
+            soft:    '#E5E7EB',
+          },
+          fontFamily: {
+            display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            sans:    ['Inter', 'system-ui', 'sans-serif'],
+          },
+          boxShadow: {
+            soft: '0 10px 30px -12px rgba(11, 37, 69, 0.15)',
+            lift: '0 20px 40px -16px rgba(11, 37, 69, 0.25)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    html, body { background: #FAFAF7; color: #1F2937; font-family: 'Inter', system-ui, sans-serif; }
+    h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: -0.02em; }
+
+    /* Reveal-on-scroll */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 600ms ease-out, transform 600ms ease-out; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* Cycling word cross-fade */
+    .cycle-word { display: inline-block; transition: opacity 300ms ease, transform 300ms ease; }
+    .cycle-word.swap { opacity: 0; transform: translateY(6px); }
+
+    /* ---------- Hero traffic-flow background (pure CSS) ---------- */
+    .traffic-bg {
+      position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    }
+    .lane {
+      position: absolute; left: 0; right: 0; height: 2px; background: rgba(11,37,69,0.08);
+    }
+    .lane.top    { top: 38%; }
+    .lane.bottom { top: 62%; }
+    .road-stripe {
+      position: absolute; left: 0; right: 0; top: 50%; height: 2px;
+      background-image: linear-gradient(to right, rgba(11,37,69,0.18) 50%, transparent 50%);
+      background-size: 36px 2px;
+    }
+    .car {
+      position: absolute; width: 34px; height: 14px; border-radius: 3px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+    }
+    .car.flow {
+      animation: drive 9s linear infinite;
+    }
+    .car.flow.delay-1 { animation-delay: -1.6s; }
+    .car.flow.delay-2 { animation-delay: -3.2s; }
+    .car.flow.delay-3 { animation-delay: -4.8s; }
+    .car.flow.delay-4 { animation-delay: -6.4s; }
+    .car.trigger {
+      top: calc(38% - 7px); left: 60%;
+      background: #DC2626;
+      animation: triggerStop 9s ease-in-out infinite;
+    }
+    .car.queue {
+      top: calc(38% - 7px);
+      background: #0B2545;
+      animation: queueBuild 9s ease-in-out infinite;
+    }
+    .car.q1 { left: 56%; animation-delay: 0s; }
+    .car.q2 { left: 52%; animation-delay: 0.15s; }
+    .car.q3 { left: 48%; animation-delay: 0.30s; }
+    .car.q4 { left: 44%; animation-delay: 0.45s; }
+
+    @keyframes drive {
+      0%   { transform: translateX(110vw); }
+      100% { transform: translateX(-40px); }
+    }
+    @keyframes triggerStop {
+      0%, 100% { transform: translateX(0); opacity: 1; }
+      20%      { transform: translateX(0); }
+      80%      { transform: translateX(0); }
+    }
+    @keyframes queueBuild {
+      0%   { opacity: 0; transform: translateX(20px); }
+      30%  { opacity: 1; transform: translateX(0); }
+      85%  { opacity: 1; transform: translateX(0); }
+      100% { opacity: 0; transform: translateX(0); }
+    }
+
+    /* Feature card hover */
+    .feature-card { transition: transform 250ms ease, box-shadow 250ms ease; }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 24px 40px -20px rgba(11,37,69,0.22); }
+
+    /* Button shadow grow */
+    .btn-primary { transition: box-shadow 200ms ease, transform 200ms ease; }
+    .btn-primary:hover { box-shadow: 0 18px 30px -12px rgba(244, 162, 97, 0.55); transform: translateY(-1px); }
+
+    /* Phone snap row */
+    .phone-row { scroll-snap-type: x mandatory; }
+    .phone-row > * { scroll-snap-align: start; }
+
+    /* Cascade arrow pulse */
+    @keyframes wavePulse {
+      0%, 100% { stroke-dashoffset: 0; opacity: 1; }
+      50%      { stroke-dashoffset: -24; opacity: 0.6; }
+    }
+    .wave-arrow { stroke-dasharray: 6 6; animation: wavePulse 2.4s linear infinite; }
+  </style>
+</head>
+
+<body class="font-sans text-ink antialiased">
+
+  <!-- ============ NAV ============ -->
+  <header class="sticky top-0 z-50 bg-cream/85 backdrop-blur border-b border-soft">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2 font-display font-extrabold text-highway">
+        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-highway text-cream text-sm">FCR</span>
+        <span class="hidden sm:inline">FASTag Chain Reaction</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-ink/80">
+        <a href="#problem"  class="hover:text-highway">Problem</a>
+        <a href="#solution" class="hover:text-highway">Solution</a>
+        <a href="#demo"     class="hover:text-highway">Demo</a>
+        <a href="#audience" class="hover:text-highway">For You</a>
+      </nav>
+      <a href="#demo" class="btn-primary inline-flex items-center gap-2 bg-saffron text-highway font-display font-semibold px-4 py-2 rounded-xl shadow-soft">
+        See demo
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ HERO ============ -->
+    <section class="relative min-h-screen flex items-center overflow-hidden">
+      <!-- Animated traffic background -->
+      <div class="traffic-bg" aria-hidden="true">
+        <div class="lane top"></div>
+        <div class="road-stripe"></div>
+        <div class="lane bottom"></div>
+
+        <!-- Flowing cars on bottom lane (R->L) -->
+        <div class="car flow"         style="top: calc(62% - 7px); background:#0B2545;"></div>
+        <div class="car flow delay-1" style="top: calc(62% - 7px); background:#06A77D;"></div>
+        <div class="car flow delay-2" style="top: calc(62% - 7px); background:#1F2937;"></div>
+        <div class="car flow delay-3" style="top: calc(62% - 7px); background:#F4A261;"></div>
+        <div class="car flow delay-4" style="top: calc(62% - 7px); background:#0B2545;"></div>
+
+        <!-- Trigger (red, stopped) + 4-car queue behind -->
+        <div class="car trigger"></div>
+        <div class="car queue q1"></div>
+        <div class="car queue q2"></div>
+        <div class="car queue q3"></div>
+        <div class="car queue q4"></div>
+      </div>
+
+      <div class="relative max-w-6xl mx-auto px-6 py-24 w-full">
+        <div class="max-w-3xl">
+          <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-highway/70 bg-white border border-soft rounded-full px-3 py-1 shadow-soft">
+            <span class="w-1.5 h-1.5 rounded-full bg-saffron"></span>
+            Srinagar &rarr; Jammu &middot; NH-44
+          </span>
+          <h1 class="mt-6 font-display font-extrabold text-highway text-5xl sm:text-6xl md:text-7xl leading-[1.02]">
+            Stop the <span id="cycleWord" class="cycle-word text-saffron">wave</span><br />
+            before it starts.
+          </h1>
+          <p class="mt-6 text-lg sm:text-xl text-ink/75 max-w-2xl">
+            <strong class="text-highway">FASTag Chain Reaction</strong> &mdash; the app that prevents toll-plaza traffic jams in India before they form.
+          </p>
+          <div class="mt-9 flex flex-wrap gap-3">
+            <a href="#demo" class="btn-primary inline-flex items-center gap-2 bg-saffron text-highway font-display font-semibold px-6 py-3.5 rounded-2xl shadow-soft">
+              See the demo
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+            <a href="../deck/pitch.pptx" class="inline-flex items-center gap-2 bg-white text-highway font-display font-semibold px-6 py-3.5 rounded-2xl border border-soft shadow-soft hover:border-highway/30">
+              Read the deck
+            </a>
+          </div>
+          <div class="mt-10 flex items-center gap-6 text-sm text-ink/60">
+            <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-success"></span> Live on NH-44</div>
+            <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-saffron"></span> Built in 36 hours</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PROBLEM ============ -->
+    <section id="problem" class="reveal py-24 sm:py-32 border-t border-soft">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">The Problem</p>
+          <h2 class="mt-3 font-display font-bold text-highway text-4xl sm:text-5xl">One stopped car. A wave that lasts minutes.</h2>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div>
+            <div class="font-display font-extrabold text-highway text-6xl sm:text-7xl leading-none">1</div>
+            <p class="mt-3 text-ink/75">Stopped car at a toll booth &mdash; low balance, blacklisted tag, or scan failure.</p>
+          </div>
+          <div>
+            <div class="font-display font-extrabold text-highway text-6xl sm:text-7xl leading-none">71</div>
+            <p class="mt-3 text-ink/75">Vehicles backed up within 90 seconds at peak hour on the Lakhanpur Toll plaza.</p>
+          </div>
+          <div>
+            <div class="font-display font-extrabold text-highway text-6xl sm:text-7xl leading-none">3.1<span class="text-3xl text-ink/60 align-top">m</span></div>
+            <p class="mt-3 text-ink/75">Of residual slowdown that propagates upstream long after the trigger clears.</p>
+          </div>
+        </div>
+
+        <p class="mt-14 max-w-3xl text-lg text-ink/75 leading-relaxed">
+          Toll plazas on the Srinagar&ndash;Jammu corridor process thousands of vehicles per hour. When even one driver discovers their FASTag has insufficient balance at the boom barrier, the queue behind them doesn&rsquo;t just pause &mdash; it compounds. A 12-second stop becomes a 3-minute wave.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ CHAIN REACTION ============ -->
+    <section class="reveal py-24 sm:py-32 bg-white border-t border-soft">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">The Chain Reaction</p>
+          <h2 class="mt-3 font-display font-bold text-highway text-4xl sm:text-5xl">Traffic waves travel backward.</h2>
+        </div>
+
+        <div class="mt-14 bg-cream rounded-3xl border border-soft p-6 sm:p-10 shadow-soft">
+          <svg viewBox="0 0 900 240" class="w-full h-auto" role="img" aria-label="Chain reaction cascade diagram">
+            <!-- highway base -->
+            <rect x="0" y="120" width="900" height="40" fill="#0B2545" opacity="0.05"/>
+            <line x1="0" y1="140" x2="900" y2="140" stroke="#0B2545" stroke-opacity="0.18" stroke-dasharray="10 10" stroke-width="2"/>
+
+            <!-- toll plaza (right) -->
+            <g transform="translate(780, 70)">
+              <rect x="0" y="0" width="80" height="100" rx="6" fill="#0B2545"/>
+              <rect x="10" y="14" width="60" height="18" rx="3" fill="#F4A261"/>
+              <text x="40" y="28" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="11" font-weight="700" fill="#0B2545">TOLL</text>
+              <rect x="14" y="42" width="52" height="6" rx="2" fill="#FAFAF7"/>
+              <rect x="14" y="54" width="52" height="6" rx="2" fill="#FAFAF7"/>
+              <rect x="14" y="66" width="52" height="6" rx="2" fill="#FAFAF7"/>
+              <!-- boom barrier -->
+              <line x1="-20" y1="50" x2="0" y2="50" stroke="#DC2626" stroke-width="4"/>
+            </g>
+
+            <!-- stopped red car at booth -->
+            <g transform="translate(710, 124)">
+              <rect width="50" height="22" rx="4" fill="#DC2626"/>
+              <circle cx="12" cy="22" r="4" fill="#1F2937"/>
+              <circle cx="38" cy="22" r="4" fill="#1F2937"/>
+            </g>
+
+            <!-- queue of 10 cars (right to left), darker = closer to trigger -->
+            <g font-family="Plus Jakarta Sans">
+              <g transform="translate(645, 124)"><rect width="50" height="22" rx="4" fill="#0B2545"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(580, 124)"><rect width="50" height="22" rx="4" fill="#0B2545"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(515, 124)"><rect width="50" height="22" rx="4" fill="#1F3A5F"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(450, 124)"><rect width="50" height="22" rx="4" fill="#2E4F7A"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(385, 124)"><rect width="50" height="22" rx="4" fill="#3D6395"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(320, 124)"><rect width="50" height="22" rx="4" fill="#4D77B0"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(255, 124)"><rect width="50" height="22" rx="4" fill="#5C8BCB"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(190, 124)"><rect width="50" height="22" rx="4" fill="#7BA3D9" opacity="0.9"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(125, 124)"><rect width="50" height="22" rx="4" fill="#9CBCE3" opacity="0.8"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+              <g transform="translate(60,  124)"><rect width="50" height="22" rx="4" fill="#BDD3ED" opacity="0.7"/><circle cx="12" cy="22" r="4" fill="#1F2937"/><circle cx="38" cy="22" r="4" fill="#1F2937"/></g>
+            </g>
+
+            <!-- backward propagation arrow -->
+            <defs>
+              <marker id="arrowL" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="#F4A261"/>
+              </marker>
+            </defs>
+            <line class="wave-arrow" x1="730" y1="80" x2="60" y2="80" stroke="#F4A261" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowL)"/>
+            <text x="395" y="64" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="13" font-weight="700" fill="#0B2545">Wave propagates upstream</text>
+
+            <!-- ground labels -->
+            <text x="810" y="200" text-anchor="middle" font-family="Inter" font-size="11" fill="#0B2545" opacity="0.6">Lakhanpur Toll</text>
+            <text x="60"  y="200" text-anchor="start"  font-family="Inter" font-size="11" fill="#0B2545" opacity="0.6">&larr; Upstream traffic</text>
+          </svg>
+
+          <p class="mt-6 text-center text-sm font-semibold text-highway/70">Wave propagates backward at ~20 km/h.</p>
+        </div>
+
+        <p class="mt-12 max-w-3xl text-lg text-ink/75 leading-relaxed">
+          When a car stops, the car behind it has to brake harder, and the one behind that brakes harder still. The disturbance travels <em>backward</em> through traffic faster than the cars themselves can recover &mdash; basic shockwave theory. By the time the original driver pays and leaves, the queue 500m back is still growing.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ SOLUTION ============ -->
+    <section id="solution" class="reveal py-24 sm:py-32 border-t border-soft">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">The Solution</p>
+          <h2 class="mt-3 font-display font-bold text-highway text-4xl sm:text-5xl">Prevent the trigger. Defuse the wave.</h2>
+          <p class="mt-5 text-lg text-ink/70">Four features that make sure no driver is the one who stops the boom barrier.</p>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Card 1 -->
+          <div class="feature-card bg-white border border-soft rounded-2xl p-6 shadow-soft">
+            <div class="w-11 h-11 rounded-xl bg-saffron/15 text-saffron flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-7-7.58-7-12a7 7 0 1 1 14 0c0 4.42-7 12-7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">5 km location warning</h3>
+            <p class="mt-2 text-sm text-ink/70">GPS-aware alerts the moment you enter a toll geofence &mdash; Lakhanpur, Sarore, Bann, Lower Munda.</p>
+          </div>
+          <!-- Card 2 -->
+          <div class="feature-card bg-white border border-soft rounded-2xl p-6 shadow-soft">
+            <div class="w-11 h-11 rounded-xl bg-highway/10 text-highway flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">Cross-bank readiness</h3>
+            <p class="mt-2 text-sm text-ink/70">Checks balance, KYC status, and blacklist flags across every issuing bank &mdash; HDFC, ICICI, SBI, Paytm, IDFC.</p>
+          </div>
+          <!-- Card 3 -->
+          <div class="feature-card bg-white border border-soft rounded-2xl p-6 shadow-soft">
+            <div class="w-11 h-11 rounded-xl bg-success/15 text-success flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">One-tap UPI recharge</h3>
+            <p class="mt-2 text-sm text-ink/70">Top up from any UPI app in under 4 seconds &mdash; before you reach the boom barrier, not after.</p>
+          </div>
+          <!-- Card 4 -->
+          <div class="feature-card bg-white border border-soft rounded-2xl p-6 shadow-soft">
+            <div class="w-11 h-11 rounded-xl bg-saffron/15 text-saffron flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">Crowdsourced plaza health</h3>
+            <p class="mt-2 text-sm text-ink/70">Live wait times and scanner status reported by every driver in the network &mdash; the more users, the smarter the corridor.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ APP PREVIEW (DARK) ============ -->
+    <section id="demo" class="reveal py-24 sm:py-32 bg-highway text-cream">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">In your pocket</p>
+          <h2 class="mt-3 font-display font-bold text-cream text-4xl sm:text-5xl">From idle map to all-clear in 4 taps.</h2>
+          <p class="mt-5 text-lg text-cream/70">Driving a Tata Sumo, plate <span class="font-mono text-saffron">JK 01 AB 1234</span>, from Srinagar to Jammu. Balance &#8377;47. Lakhanpur is 5 km out.</p>
+        </div>
+
+        <div class="mt-14 phone-row flex gap-6 overflow-x-auto pb-6 -mx-6 px-6">
+          <!-- Phone 1: Idle map -->
+          <div class="shrink-0 w-[260px]">
+            <div class="relative bg-black rounded-[36px] p-2 shadow-lift">
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-2xl z-10"></div>
+              <div class="bg-cream rounded-[28px] aspect-[9/19] overflow-hidden relative text-ink">
+                <div class="absolute inset-0 bg-gradient-to-b from-[#dbeafe] via-[#e0f2fe] to-[#bae6fd]"></div>
+                <svg viewBox="0 0 200 380" class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                  <path d="M20 360 C 60 280, 140 240, 110 160 S 80 60, 180 20" stroke="#0B2545" stroke-width="3" fill="none" opacity="0.6"/>
+                  <circle cx="20" cy="360" r="6" fill="#06A77D"/>
+                  <circle cx="180" cy="20" r="6" fill="#F4A261"/>
+                </svg>
+                <div class="absolute top-10 left-3 right-3 bg-white/95 backdrop-blur rounded-xl p-3 shadow-soft">
+                  <p class="text-[10px] uppercase tracking-wider text-ink/50 font-semibold">Trip</p>
+                  <p class="font-display font-bold text-highway text-sm leading-tight">Srinagar &rarr; Jammu</p>
+                  <p class="text-[10px] text-ink/60 mt-0.5">NH-44 &middot; 270 km</p>
+                </div>
+                <div class="absolute bottom-4 left-3 right-3 bg-highway text-cream rounded-xl p-3">
+                  <p class="text-[10px] uppercase tracking-wider opacity-70 font-semibold">FASTag balance</p>
+                  <p class="font-display font-extrabold text-saffron text-xl mt-0.5">&#8377;47</p>
+                </div>
+              </div>
+            </div>
+            <p class="mt-3 text-center text-sm text-cream/70 font-display font-semibold">1 &middot; Idle map</p>
+          </div>
+
+          <!-- Phone 2: 5km Warning -->
+          <div class="shrink-0 w-[260px]">
+            <div class="relative bg-black rounded-[36px] p-2 shadow-lift">
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-2xl z-10"></div>
+              <div class="bg-cream rounded-[28px] aspect-[9/19] overflow-hidden relative text-ink p-4 flex flex-col">
+                <div class="mt-6 mx-auto w-14 h-14 rounded-full bg-saffron/20 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                </div>
+                <p class="mt-4 text-center text-[11px] uppercase tracking-wider text-saffron font-bold">Low balance ahead</p>
+                <h3 class="mt-1 text-center font-display font-extrabold text-highway text-lg leading-tight">Lakhanpur Toll<br/>in 5 km</h3>
+                <p class="mt-2 text-center text-[11px] text-ink/70">Toll for Tata Sumo: <strong>&#8377;185</strong><br/>Your balance: <strong class="text-red-600">&#8377;47</strong></p>
+                <div class="mt-auto bg-saffron text-highway rounded-xl py-3 text-center font-display font-bold text-sm">Recharge &#8377;500</div>
+                <div class="mt-2 text-center text-[10px] text-ink/50">Other tolls today: Sarore &middot; Bann</div>
+              </div>
+            </div>
+            <p class="mt-3 text-center text-sm text-cream/70 font-display font-semibold">2 &middot; 5 km warning</p>
+          </div>
+
+          <!-- Phone 3: UPI Confirmation -->
+          <div class="shrink-0 w-[260px]">
+            <div class="relative bg-black rounded-[36px] p-2 shadow-lift">
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-2xl z-10"></div>
+              <div class="bg-cream rounded-[28px] aspect-[9/19] overflow-hidden relative text-ink p-4 flex flex-col">
+                <p class="mt-7 text-center text-[10px] uppercase tracking-wider text-ink/50 font-semibold">Pay via UPI</p>
+                <p class="text-center font-display font-extrabold text-highway text-3xl mt-1">&#8377;500</p>
+                <p class="text-center text-[11px] text-ink/60 mt-1">to NHAI FASTag &middot; HDFC</p>
+
+                <div class="mt-5 bg-white border border-soft rounded-xl p-3 text-[11px] space-y-1.5">
+                  <div class="flex justify-between"><span class="text-ink/60">Vehicle</span><span class="font-mono text-highway">JK 01 AB 1234</span></div>
+                  <div class="flex justify-between"><span class="text-ink/60">Tag</span><span class="text-highway font-semibold">HDFC FASTag</span></div>
+                  <div class="flex justify-between"><span class="text-ink/60">After top-up</span><span class="text-success font-bold">&#8377;547</span></div>
+                </div>
+
+                <div class="mt-auto bg-success text-white rounded-xl py-3 text-center font-display font-bold text-sm">Pay with UPI</div>
+                <div class="mt-2 text-center text-[10px] text-ink/50">Powered by PhonePe &middot; GPay &middot; Paytm</div>
+              </div>
+            </div>
+            <p class="mt-3 text-center text-sm text-cream/70 font-display font-semibold">3 &middot; UPI confirm</p>
+          </div>
+
+          <!-- Phone 4: All Clear -->
+          <div class="shrink-0 w-[260px]">
+            <div class="relative bg-black rounded-[36px] p-2 shadow-lift">
+              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-2xl z-10"></div>
+              <div class="bg-cream rounded-[28px] aspect-[9/19] overflow-hidden relative text-ink p-4 flex flex-col">
+                <div class="mt-10 mx-auto w-16 h-16 rounded-full bg-success/15 flex items-center justify-center">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#06A77D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <p class="mt-5 text-center text-[11px] uppercase tracking-wider text-success font-bold">All clear</p>
+                <h3 class="mt-1 text-center font-display font-extrabold text-highway text-lg leading-tight">You&rsquo;re ready for<br/>Lakhanpur</h3>
+                <p class="mt-3 text-center text-[11px] text-ink/70">Balance: <strong class="text-highway">&#8377;547</strong><br/>ETA at booth: 3 min</p>
+                <div class="mt-auto bg-highway/5 border border-soft rounded-xl p-2.5 text-center">
+                  <p class="text-[10px] uppercase tracking-wider text-ink/50 font-semibold">Next plaza</p>
+                  <p class="text-highway font-display font-semibold text-xs mt-0.5">Sarore &middot; 42 km</p>
+                </div>
+              </div>
+            </div>
+            <p class="mt-3 text-center text-sm text-cream/70 font-display font-semibold">4 &middot; All clear</p>
+          </div>
+        </div>
+
+        <div class="mt-10">
+          <a href="../app-mockup/index.html" class="btn-primary inline-flex items-center gap-2 bg-saffron text-highway font-display font-semibold px-6 py-3.5 rounded-2xl shadow-soft">
+            Open the full app mockup
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="../comparison/index.html" class="ml-3 inline-flex items-center gap-2 text-cream/80 font-display font-semibold px-5 py-3.5 hover:text-saffron">
+            Compare before / after &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ BY THE NUMBERS ============ -->
+    <section class="reveal py-24 sm:py-32 border-t border-soft">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">By the numbers</p>
+          <h2 class="mt-3 font-display font-bold text-highway text-4xl sm:text-5xl">A market that&rsquo;s already in your phone.</h2>
+        </div>
+
+        <div class="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+          <div>
+            <div class="font-display font-extrabold text-highway text-5xl sm:text-6xl">11+ Cr</div>
+            <p class="mt-2 text-sm font-medium text-ink/70">Active FASTags issued nationwide</p>
+          </div>
+          <div>
+            <div class="font-display font-extrabold text-highway text-5xl sm:text-6xl">~98%</div>
+            <p class="mt-2 text-sm font-medium text-ink/70">National highway toll penetration</p>
+          </div>
+          <div>
+            <div class="font-display font-extrabold text-highway text-5xl sm:text-6xl">&#8377;1,500<span class="text-2xl align-top">Cr</span></div>
+            <p class="mt-2 text-sm font-medium text-ink/70">Annual fuel-savings opportunity</p>
+          </div>
+          <div>
+            <div class="font-display font-extrabold text-highway text-5xl sm:text-6xl">49%</div>
+            <p class="mt-2 text-sm font-medium text-ink/70">Rear-end share of all highway crashes</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="reveal py-24 sm:py-32 bg-white border-t border-soft">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">How it works</p>
+          <h2 class="mt-3 font-display font-bold text-highway text-4xl sm:text-5xl">Four steps. Zero stops.</h2>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <!-- Step 1 -->
+          <div>
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-full bg-highway text-cream font-display font-bold flex items-center justify-center">01</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">GPS ping</h3>
+            <p class="mt-2 text-sm text-ink/70">Your phone reports position every few seconds while a trip is active.</p>
+          </div>
+          <!-- Step 2 -->
+          <div>
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-full bg-highway text-cream font-display font-bold flex items-center justify-center">02</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">Geofence check</h3>
+            <p class="mt-2 text-sm text-ink/70">A 5 km radius around every plaza on NH-44 &mdash; Lakhanpur, Sarore, Bann, Lower Munda &mdash; fires the alert.</p>
+          </div>
+          <!-- Step 3 -->
+          <div>
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-full bg-highway text-cream font-display font-bold flex items-center justify-center">03</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-7-3-7-12V4l7-2 7 2v6c0 9-7 12-7 12z"/><polyline points="9 11 11 13 15 9"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">Status check</h3>
+            <p class="mt-2 text-sm text-ink/70">We query your issuing bank for balance, KYC, blacklist &mdash; all in one cross-bank call.</p>
+          </div>
+          <!-- Step 4 -->
+          <div>
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-full bg-highway text-cream font-display font-bold flex items-center justify-center">04</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F4A261" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </div>
+            <h3 class="mt-5 font-display font-bold text-highway text-lg">Alert + recharge</h3>
+            <p class="mt-2 text-sm text-ink/70">If you&rsquo;re short, one tap opens UPI. &#8377;47 becomes &#8377;547 before you reach the booth.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AUDIENCE ============ -->
+    <section id="audience" class="reveal py-24 sm:py-32 border-t border-soft">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">For You</p>
+          <h2 class="mt-3 font-display font-bold text-highway text-4xl sm:text-5xl">Built for everyone the wave touches.</h2>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 md:grid-cols-3 gap-10">
+          <!-- Drivers -->
+          <div class="bg-white border border-soft rounded-2xl p-7 shadow-soft">
+            <div class="w-12 h-1 bg-saffron rounded-full"></div>
+            <h3 class="mt-5 font-display font-bold text-highway text-2xl">Drivers</h3>
+            <ul class="mt-5 space-y-3 text-sm text-ink/75">
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> Never get embarrassed at the boom barrier again.</li>
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> See live wait times for Lakhanpur and 3 nearby plazas.</li>
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> One screen, every bank, every FASTag.</li>
+            </ul>
+          </div>
+          <!-- Fleet operators -->
+          <div class="bg-white border border-soft rounded-2xl p-7 shadow-soft">
+            <div class="w-12 h-1 bg-saffron rounded-full"></div>
+            <h3 class="mt-5 font-display font-bold text-highway text-2xl">Fleet operators</h3>
+            <ul class="mt-5 space-y-3 text-sm text-ink/75">
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> Bulk-monitor 100s of vehicle tags from one dashboard.</li>
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> Auto-top-up rules per truck, per route, per driver.</li>
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> Trip-level toll reconciliation for J&amp;K corridor routes.</li>
+            </ul>
+          </div>
+          <!-- NHAI -->
+          <div class="bg-white border border-soft rounded-2xl p-7 shadow-soft">
+            <div class="w-12 h-1 bg-saffron rounded-full"></div>
+            <h3 class="mt-5 font-display font-bold text-highway text-2xl">NHAI</h3>
+            <ul class="mt-5 space-y-3 text-sm text-ink/75">
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> Plaza-level throughput data, refreshed every minute.</li>
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> Early-warning system for cascading congestion events.</li>
+              <li class="flex gap-2"><span class="text-saffron font-bold">&middot;</span> Drop-in API &mdash; no on-site hardware changes required.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ BUILT FOR HACKATHON (DARK) ============ -->
+    <section class="reveal py-24 sm:py-32 bg-highway text-cream">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl">
+          <p class="text-sm font-semibold uppercase tracking-wider text-saffron">Built for [Hackathon Name]</p>
+          <h2 class="mt-3 font-display font-bold text-cream text-4xl sm:text-5xl">Made in a weekend. Sized for a country.</h2>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <p class="text-xs uppercase tracking-wider text-saffron font-semibold">Theme</p>
+            <p class="mt-2 font-display font-bold text-cream text-xl">Smart Mobility for Bharat</p>
+          </div>
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <p class="text-xs uppercase tracking-wider text-saffron font-semibold">Stack</p>
+            <p class="mt-2 font-display font-bold text-cream text-xl">React Native &middot; Node &middot; Postgres &middot; NHAI API</p>
+          </div>
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <p class="text-xs uppercase tracking-wider text-saffron font-semibold">Team</p>
+            <p class="mt-2 font-display font-bold text-cream text-xl">Team FCR &mdash; solo founder + AI copilot</p>
+          </div>
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <p class="text-xs uppercase tracking-wider text-saffron font-semibold">Status</p>
+            <p class="mt-2 font-display font-bold text-cream text-xl">Built in 36 hours &middot; NH-44 prototype live</p>
+          </div>
+        </div>
+
+        <div class="mt-10 flex flex-wrap gap-3">
+          <a href="#" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 text-cream font-display font-semibold px-5 py-3 rounded-2xl border border-white/15">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-2.04c-3.2.7-3.88-1.36-3.88-1.36-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.74 2.68 1.24 3.33.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.17.92-.26 1.91-.39 2.89-.39.98 0 1.97.13 2.89.39 2.2-1.48 3.17-1.17 3.17-1.17.63 1.58.23 2.75.12 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.7 5.36-5.27 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+            View on GitHub
+          </a>
+          <a href="../deck/pitch.pptx" class="inline-flex items-center gap-2 bg-saffron text-highway font-display font-semibold px-5 py-3 rounded-2xl">
+            Read the pitch deck
+          </a>
+          <a href="../web-prototype/index.html" class="inline-flex items-center gap-2 text-cream/80 hover:text-saffron font-display font-semibold px-5 py-3">
+            Try the web prototype &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="py-12 border-t border-soft">
+      <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2 font-display font-extrabold text-highway">
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-highway text-cream text-sm">FCR</span>
+          <span>FASTag Chain Reaction</span>
+        </div>
+        <p class="text-sm text-ink/60 font-medium">Built in 36 hours.</p>
+        <a href="#" aria-label="GitHub" class="text-ink/70 hover:text-highway">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-2.04c-3.2.7-3.88-1.36-3.88-1.36-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.74 2.68 1.24 3.33.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.17.92-.26 1.91-.39 2.89-.39.98 0 1.97.13 2.89.39 2.2-1.48 3.17-1.17 3.17-1.17.63 1.58.23 2.75.12 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.7 5.36-5.27 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+        </a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ============ JS ============ -->
+  <script>
+    // Cycling hero word
+    (function () {
+      const el = document.getElementById('cycleWord');
+      if (!el) return;
+      const words = ['wave', 'jam', 'cascade'];
+      let i = 0;
+      setInterval(() => {
+        el.classList.add('swap');
+        setTimeout(() => {
+          i = (i + 1) % words.length;
+          el.textContent = words[i];
+          el.classList.remove('swap');
+        }, 300);
+      }, 2000);
+    })();
+
+    // Section reveal on scroll
+    (function () {
+      const els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window) || !els.length) {
+        els.forEach(e => e.classList.add('visible'));
+        return;
+      }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      els.forEach(e => io.observe(e));
+    })();
+  </script>
+</body>
+</html>

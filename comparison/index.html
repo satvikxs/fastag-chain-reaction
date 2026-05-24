@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Same toll. Same minute. Two outcomes. — FASTag Chain Reaction</title>
+<meta name="description" content="Lakhanpur Toll on NH-44, Srinagar–Jammu — with vs without the FASTag Chain Reaction app. A live side-by-side simulation." />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:      '#0B2545',
+          page:     '#FAFAF7',
+          caution:  '#E63946',
+          success:  '#06A77D',
+          accent:   '#F4A261',
+          neutral2: '#6B7280',
+          redtint:  '#FFEEEE',
+          greentint:'#E8F5EF',
+        },
+        fontFamily: {
+          display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          body:    ['Inter', 'system-ui', 'sans-serif'],
+          mono:    ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+        },
+        boxShadow: {
+          soft:  '0 1px 2px rgba(11,37,69,0.04), 0 8px 24px rgba(11,37,69,0.06)',
+          lift:  '0 4px 12px rgba(11,37,69,0.08), 0 18px 48px rgba(11,37,69,0.10)',
+        },
+      }
+    }
+  }
+</script>
+
+<style>
+  html, body { background:#FAFAF7; color:#0B2545; font-family:'Inter',system-ui,sans-serif; }
+  h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',system-ui,sans-serif; letter-spacing:-0.01em; }
+  .mono { font-family:'IBM Plex Mono', ui-monospace, monospace; }
+  .eyebrow { font-family:'IBM Plex Mono', ui-monospace, monospace; text-transform:uppercase; letter-spacing:0.14em; font-size:11px; }
+
+  /* CTA */
+  .cta {
+    background:#F4A261; color:#fff; transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+    box-shadow: 0 6px 18px rgba(244,162,97,0.35);
+  }
+  .cta:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(244,162,97,0.45); background:#f0974a; }
+  .cta:active { transform: translateY(0); }
+
+  /* Phone mockup */
+  .phone {
+    width: 92px; height: 168px; border-radius: 18px; background:#fff;
+    box-shadow: 0 4px 14px rgba(11,37,69,0.12), inset 0 0 0 2px #0B2545;
+    position:relative; overflow:hidden; flex-shrink:0;
+  }
+  .phone::before {
+    content:''; position:absolute; top:6px; left:50%; transform:translateX(-50%);
+    width:32px; height:5px; border-radius:3px; background:#0B2545;
+  }
+  .phone-screen { position:absolute; inset:14px 6px 6px 6px; border-radius:10px; padding:8px;
+    display:flex; flex-direction:column; gap:6px; font-family:'Inter',sans-serif; font-size:10px; }
+
+  /* Highway scene */
+  .highway {
+    position:relative; height:170px; border-radius:14px; overflow:hidden;
+    background: linear-gradient(180deg, #f4efe6 0%, #e9e2d3 100%);
+    border: 1px solid rgba(11,37,69,0.06);
+  }
+  .road {
+    position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+    height:64px; background:#2a2a2e; border-top:2px solid #3a3a3f; border-bottom:2px solid #3a3a3f;
+  }
+  .road-dash {
+    position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+    height:2px; background-image: linear-gradient(90deg, #f4d35e 50%, transparent 50%);
+    background-size: 28px 2px; opacity:.9;
+  }
+  .toll {
+    position:absolute; right:0; top:50%; transform:translateY(-50%);
+    width:64px; height:84px; background:#0B2545; border-radius:6px 0 0 6px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff;
+    font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.08em;
+  }
+  .toll::after { content:'TOLL'; }
+  .toll-bar {
+    position:absolute; right:64px; top:50%; height:3px; width:34px; background:#F4A261;
+    transform-origin: right center;
+    transition: transform 0.4s ease;
+  }
+  .car {
+    position:absolute; top:50%; transform:translate(-50%,-50%);
+    width:24px; height:12px; border-radius:3px;
+    background:#06A77D; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    transition: background-color 0.3s ease;
+  }
+  .car::before { content:''; position:absolute; inset:2px 4px; background:rgba(255,255,255,0.25); border-radius:1px; }
+
+  /* Wave overlay */
+  .wave {
+    position:absolute; top:50%; transform:translateY(-50%);
+    height:64px; background: linear-gradient(90deg, rgba(230,57,70,0) 0%, rgba(230,57,70,0.32) 100%);
+    pointer-events:none;
+    transition: left 0.4s ease, width 0.4s ease, opacity 0.4s ease;
+    opacity:0;
+  }
+
+  /* Tickers */
+  .ticker { font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.7; color:#0B2545; }
+  .ticker .row { display:flex; gap:10px; align-items:baseline; opacity:0; transform:translateY(4px);
+                 transition: opacity .35s ease, transform .35s ease; }
+  .ticker .row.shown { opacity:1; transform:none; }
+  .ticker .t { color:#6B7280; min-width:64px; }
+
+  /* Panels */
+  .panel { border-radius:1rem; padding:24px; box-shadow: 0 1px 2px rgba(11,37,69,0.04), 0 8px 24px rgba(11,37,69,0.06); }
+  .panel-without { background:#FFEEEE; }
+  .panel-with    { background:#E8F5EF; }
+
+  /* Badges */
+  .badge {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600;
+    font-family:'Plus Jakarta Sans',sans-serif;
+  }
+  .badge-red   { background:#fff; color:#E63946; border:1px solid rgba(230,57,70,0.25); }
+  .badge-green { background:#fff; color:#06A77D; border:1px solid rgba(6,167,125,0.25); }
+
+  /* Counters */
+  .counter-card { background:#fff; border-radius:12px; padding:12px; box-shadow: 0 1px 2px rgba(11,37,69,0.04); }
+  .counter-card .v { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:22px; color:#0B2545; }
+  .counter-card .l { font-size:11px; color:#6B7280; text-transform:uppercase; letter-spacing:0.08em; margin-top:2px; }
+
+  /* Scroll reveal */
+  .reveal { opacity:0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity:1; transform:none; }
+
+  /* VS divider (mobile only) */
+  .vs-divider { display:none; }
+  @media (max-width: 1023px) {
+    .vs-divider {
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:18px;
+      color:#0B2545; padding:14px 0;
+    }
+  }
+
+  /* Hover lift on cards */
+  .lift { transition: transform .2s ease, box-shadow .2s ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(11,37,69,0.08), 0 18px 48px rgba(11,37,69,0.10); }
+</style>
+</head>
+<body class="font-body text-ink">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 bg-page/85 backdrop-blur border-b border-ink/5">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="../index.html" class="flex items-center gap-2 group">
+      <span class="w-8 h-8 rounded-lg bg-ink text-page font-display font-extrabold flex items-center justify-center text-sm">FC</span>
+      <span class="font-display font-bold text-ink">FASTag Chain Reaction</span>
+    </a>
+    <nav class="flex items-center gap-5 text-sm">
+      <a href="../index.html" class="text-neutral2 hover:text-ink transition">← Back to site</a>
+      <button id="soundToggle" class="w-9 h-9 rounded-full bg-white border border-ink/10 hover:border-ink/30 transition flex items-center justify-center" aria-label="Toggle sound">
+        <span id="soundIcon">🔇</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="max-w-7xl mx-auto px-6 pt-16 pb-10 text-center">
+  <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-ink/10 mono text-[11px] tracking-wider text-neutral2 mb-6">
+    <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
+    FRIDAY 24 MAY 2026 · 07:42 AM · NH-44
+  </div>
+  <h1 class="font-display font-extrabold text-ink leading-[1.05] text-[44px] sm:text-[56px] lg:text-[72px] max-w-5xl mx-auto">
+    Same toll. Same minute.<br/>Two outcomes.
+  </h1>
+  <p class="mt-5 text-neutral2 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+    Lakhanpur Toll, NH-44 Srinagar–Jammu — with vs without the FASTag Chain Reaction app.
+  </p>
+  <div class="mt-9">
+    <button id="runBtn" class="cta inline-flex items-center gap-3 px-8 py-4 rounded-lg font-display font-bold text-base">
+      <span id="runBtnIcon">▶</span>
+      <span id="runBtnLabel">RUN SIMULATION</span>
+    </button>
+  </div>
+  <p class="mt-4 mono text-[11px] text-neutral2 tracking-wider">COMPRESSED 5-MIN VIEW · ~12 SECONDS</p>
+</section>
+
+<!-- PANELS -->
+<section class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+
+    <!-- LEFT: WITHOUT -->
+    <article class="panel panel-without flex flex-col">
+      <div class="flex items-start justify-between gap-4">
+        <span class="badge badge-red">❌ Today (no warning)</span>
+        <div class="phone" aria-label="Phone showing no alert">
+          <div class="phone-screen" style="background:#f3f3f3; color:#9aa0a6;">
+            <div class="mono text-[9px]" style="opacity:.7;">07:42 AM</div>
+            <div class="mt-auto text-center text-[10px]" style="opacity:.6;">No alert</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="font-display font-bold text-ink text-xl mt-5">Without our app</h3>
+      <p class="text-neutral2 text-sm mt-1">A wave forms. Everyone behind pays the price.</p>
+
+      <!-- Highway -->
+      <div class="highway mt-5" id="laneWithout">
+        <div class="road"></div>
+        <div class="road-dash"></div>
+        <div class="wave" id="waveWithout"></div>
+        <div class="toll"></div>
+        <div class="toll-bar" id="barWithout"></div>
+        <!-- cars injected by JS -->
+      </div>
+
+      <!-- Ticker -->
+      <div class="ticker mt-5 space-y-1" id="tickerWithout">
+        <div class="row"><span class="t">T+0s</span><span>One driver has insufficient balance</span></div>
+        <div class="row"><span class="t">T+45s</span><span>12 vehicles queued</span></div>
+        <div class="row"><span class="t">T+90s</span><span>38 vehicles queued, wave forming</span></div>
+        <div class="row"><span class="t">T+3m</span><span>71 vehicles backed up</span></div>
+        <div class="row"><span class="t">T+5m</span><span>Residual slowdown: 3 minutes per driver</span></div>
+      </div>
+
+      <!-- Counters -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
+        <div class="counter-card"><div class="v mono" id="cw-vehicles">0</div><div class="l">Vehicles delayed</div></div>
+        <div class="counter-card"><div class="v mono" id="cw-minutes">0</div><div class="l">Minutes lost</div></div>
+        <div class="counter-card"><div class="v mono" id="cw-fuel">₹0</div><div class="l">Fuel wasted</div></div>
+        <div class="counter-card"><div class="v mono" id="cw-amb">0</div><div class="l">Ambulances stuck</div></div>
+      </div>
+
+      <!-- Final stat -->
+      <div class="mt-auto pt-5">
+        <div class="rounded-xl bg-white border border-caution/20 p-4 text-sm text-ink">
+          <span class="eyebrow text-caution">Final</span>
+          <p class="mt-1.5 leading-relaxed">71 cars delayed · 3.1 min residual slowdown · ~₹4,260 fuel wasted · 1 ambulance delayed by 4 min</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- VS divider for mobile -->
+    <div class="vs-divider">↓ VS ↓</div>
+
+    <!-- RIGHT: WITH -->
+    <article class="panel panel-with flex flex-col">
+      <div class="flex items-start justify-between gap-4">
+        <span class="badge badge-green">✓ With our app</span>
+        <div class="phone" aria-label="Phone showing recharge flow">
+          <div class="phone-screen" id="phoneScreen" style="background:#f7fbf9;">
+            <div class="mono text-[9px] text-neutral2">07:37 AM</div>
+            <div id="phoneTitle" class="font-display font-bold text-ink text-[11px] leading-tight">Ready</div>
+            <div id="phoneBody" class="text-[10px] text-neutral2 leading-snug">Tap RUN to start</div>
+            <div id="phoneBtn" class="mt-auto text-center text-[10px] rounded-md py-1.5" style="background:#06A77D;color:#fff;opacity:.4;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="font-display font-bold text-ink text-xl mt-5">With FASTag Chain Reaction</h3>
+      <p class="text-neutral2 text-sm mt-1">One alert, 5 km earlier. No wave. No delay.</p>
+
+      <!-- Highway -->
+      <div class="highway mt-5" id="laneWith">
+        <div class="road"></div>
+        <div class="road-dash"></div>
+        <div class="toll"></div>
+        <div class="toll-bar" id="barWith"></div>
+        <!-- cars injected by JS -->
+      </div>
+
+      <!-- Ticker -->
+      <div class="ticker mt-5 space-y-1" id="tickerWith">
+        <div class="row"><span class="t">T-5m</span><span>App detects low balance, alerts driver</span></div>
+        <div class="row"><span class="t">T-4m</span><span>Driver recharges via UPI — ₹500</span></div>
+        <div class="row"><span class="t">T-3m</span><span>FASTag cleared, ready for toll</span></div>
+        <div class="row"><span class="t">T+0s</span><span>Driver passes through Lakhanpur Toll. No stop.</span></div>
+        <div class="row"><span class="t">T+5m</span><span>0 vehicles delayed. Wave never formed.</span></div>
+      </div>
+
+      <!-- Counters -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
+        <div class="counter-card"><div class="v mono">0</div><div class="l">Vehicles delayed</div></div>
+        <div class="counter-card"><div class="v mono">0</div><div class="l">Minutes lost</div></div>
+        <div class="counter-card"><div class="v mono">₹0</div><div class="l">Fuel wasted</div></div>
+        <div class="counter-card"><div class="v mono">0</div><div class="l">Ambulances stuck</div></div>
+      </div>
+
+      <!-- Final stat -->
+      <div class="mt-auto pt-5">
+        <div class="rounded-xl bg-white border border-success/20 p-4 text-sm text-ink">
+          <span class="eyebrow text-success">Final</span>
+          <p class="mt-1.5 leading-relaxed">0 cars delayed · 0 min slowdown · ~₹0 fuel wasted · ambulance arrived on time</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- DIFFERENCE STRIP -->
+<section class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="reveal rounded-2xl bg-ink text-page p-8 sm:p-12 text-center shadow-lift">
+    <p class="eyebrow text-accent">The difference</p>
+    <h2 class="font-display font-extrabold text-3xl sm:text-5xl lg:text-6xl leading-[1.05] mt-3">
+      71 → 0 vehicles · 3.1 min → 0 min · ₹4,260 → ₹0
+    </h2>
+    <p class="mt-5 text-page/70 text-base sm:text-lg max-w-2xl mx-auto">
+      One ₹500 recharge, 5 km earlier. That's the whole pitch.
+    </p>
+  </div>
+</section>
+
+<!-- KASHMIR IMPACT -->
+<section class="max-w-7xl mx-auto px-6 pb-20">
+  <h2 class="reveal font-display font-extrabold text-ink text-3xl sm:text-4xl mb-8">Why this matters on NH-44:</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="reveal lift rounded-2xl bg-white p-6 shadow-soft border border-ink/5">
+      <p class="font-display font-extrabold text-ink text-4xl">270 km</p>
+      <p class="text-neutral2 text-sm mt-2 leading-relaxed">Srinagar → Jammu route length, the only year-round road link.</p>
+    </div>
+    <div class="reveal lift rounded-2xl bg-white p-6 shadow-soft border border-ink/5">
+      <p class="font-display font-extrabold text-ink text-4xl">3×</p>
+      <p class="text-neutral2 text-sm mt-2 leading-relaxed">Single-lane stretches at Pir Panjal tunnel amplify jams threefold.</p>
+    </div>
+    <div class="reveal lift rounded-2xl bg-white p-6 shadow-soft border border-ink/5">
+      <p class="font-display font-extrabold text-ink text-4xl">7 hrs</p>
+      <p class="text-neutral2 text-sm mt-2 leading-relaxed">Average Srinagar → Jammu medical evacuation. Every toll delay costs lives.</p>
+    </div>
+  </div>
+
+  <blockquote class="reveal mt-6 rounded-2xl bg-accent/10 border border-accent/30 p-6 sm:p-8">
+    <p class="font-display font-semibold text-ink text-xl sm:text-2xl leading-snug">
+      "On NH-44 you don't just lose time — you lose the only road to Jammu."
+    </p>
+  </blockquote>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-ink/10">
+  <div class="max-w-7xl mx-auto px-6 py-8 text-center text-sm text-neutral2">
+    Powered by FASTag Chain Reaction. Demo data — Nagel-Schreckenberg sim, single-lane approach, 200 vehicles.
+    See <span class="mono">sim/README.md</span> for model details.
+  </div>
+</footer>
+
+<script>
+/* =========================================================================
+   FASTag Chain Reaction — comparison simulation
+   - Two panels animate in true parallel via requestAnimationFrame
+   - Counters tick with cubic ease-out
+   - Web Audio API for sound (horn + success ping)
+   ========================================================================= */
+
+(() => {
+  const DURATION_MS   = 12000;        // total animation
+  const SIM_MAX_SEC   = 300;          // 5 simulated minutes
+  const FINAL = { vehicles: 71, minutes: 3.1, fuel: 4260, ambulances: 1 };
+
+  // ---- Audio ---------------------------------------------------------------
+  let audioOn = false;
+  let ctx = null;
+  function ensureCtx() {
+    if (!ctx) {
+      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ ctx = null; }
+    }
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function playHorn() {
+    if (!audioOn) return;
+    const c = ensureCtx(); if (!c) return;
+    const t0 = c.currentTime;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(220, t0);
+    o.frequency.linearRampToValueAtTime(180, t0 + 0.6);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+    o.connect(g).connect(c.destination);
+    o.start(t0); o.stop(t0 + 0.75);
+  }
+  function playPing() {
+    if (!audioOn) return;
+    const c = ensureCtx(); if (!c) return;
+    const t0 = c.currentTime;
+    [880, 1320].forEach((f, i) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f, t0 + i*0.08);
+      g.gain.setValueAtTime(0.0001, t0 + i*0.08);
+      g.gain.exponentialRampToValueAtTime(0.16, t0 + i*0.08 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i*0.08 + 0.35);
+      o.connect(g).connect(c.destination);
+      o.start(t0 + i*0.08); o.stop(t0 + i*0.08 + 0.4);
+    });
+  }
+
+  const soundBtn = document.getElementById('soundToggle');
+  const soundIcon = document.getElementById('soundIcon');
+  soundBtn.addEventListener('click', () => {
+    audioOn = !audioOn;
+    soundIcon.textContent = audioOn ? '🔊' : '🔇';
+    if (audioOn) ensureCtx();
+  });
+
+  // ---- Highway car setup ---------------------------------------------------
+  const LANE_PAD_LEFT  = 12;
+  const LANE_PAD_RIGHT = 80; // leave space for toll
+  function buildCars(laneEl, count, color) {
+    const cars = [];
+    for (let i = 0; i < count; i++) {
+      const car = document.createElement('div');
+      car.className = 'car';
+      car.style.background = color;
+      laneEl.appendChild(car);
+      cars.push(car);
+    }
+    return cars;
+  }
+  function placeCar(car, laneEl, frac) {
+    const w = laneEl.clientWidth;
+    const usable = w - LANE_PAD_LEFT - LANE_PAD_RIGHT;
+    const x = LANE_PAD_LEFT + usable * frac;
+    car.style.left = x + 'px';
+  }
+
+  const laneWithout = document.getElementById('laneWithout');
+  const laneWith    = document.getElementById('laneWith');
+  const CAR_COUNT   = 9;
+
+  const carsWithout = buildCars(laneWithout, CAR_COUNT, '#06A77D');
+  const carsWith    = buildCars(laneWith,    CAR_COUNT, '#06A77D');
+
+  // initial positions (cars approach from left)
+  function resetPositions() {
+    for (let i = 0; i < CAR_COUNT; i++) {
+      placeCar(carsWithout[i], laneWithout, -0.05 - i * 0.08);
+      placeCar(carsWith[i],    laneWith,    -0.05 - i * 0.08);
+      carsWithout[i].style.background = '#06A77D';
+      carsWith[i].style.background    = '#06A77D';
+    }
+    document.getElementById('barWithout').style.transform = 'rotate(0deg)';
+    document.getElementById('barWith').style.transform = 'rotate(0deg)';
+    const wave = document.getElementById('waveWithout');
+    wave.style.left = '100%'; wave.style.width = '0px'; wave.style.opacity = '0';
+  }
+  resetPositions();
+
+  // ---- Tickers -------------------------------------------------------------
+  const tickerWithoutRows = document.querySelectorAll('#tickerWithout .row');
+  const tickerWithRows    = document.querySelectorAll('#tickerWith .row');
+  // sim seconds at which each row reveals
+  const withoutTimes = [0, 45, 90, 180, 300];
+  const withTimes    = [0, 60, 120, 180, 300];
+
+  function resetTickers() {
+    tickerWithoutRows.forEach(r => r.classList.remove('shown'));
+    tickerWithRows.forEach(r => r.classList.remove('shown'));
+  }
+
+  // ---- Counters ------------------------------------------------------------
+  const elVehicles = document.getElementById('cw-vehicles');
+  const elMinutes  = document.getElementById('cw-minutes');
+  const elFuel     = document.getElementById('cw-fuel');
+  const elAmb      = document.getElementById('cw-amb');
+
+  function fmtMoney(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); }
+  function fmtMinutes(n){ return (Math.round(n*10)/10).toFixed(1); }
+  function fmtInt(n){ return Math.round(n).toString(); }
+
+  function resetCounters() {
+    elVehicles.textContent = '0';
+    elMinutes.textContent  = '0';
+    elFuel.textContent     = '₹0';
+    elAmb.textContent      = '0';
+  }
+
+  // ---- Phone (WITH panel) animation ---------------------------------------
+  const phoneTitle = document.getElementById('phoneTitle');
+  const phoneBody  = document.getElementById('phoneBody');
+  const phoneBtn   = document.getElementById('phoneBtn');
+
+  function phoneState(stage) {
+    if (stage === 0) {
+      phoneTitle.textContent = 'Ready';
+      phoneBody.textContent  = 'Tap RUN to start';
+      phoneBtn.textContent   = '—';
+      phoneBtn.style.background = '#06A77D';
+      phoneBtn.style.opacity = '.4';
+    } else if (stage === 1) {
+      phoneTitle.textContent = 'Low balance';
+      phoneBody.textContent  = '5 km to Lakhanpur. ₹500 needed.';
+      phoneBtn.textContent   = 'Recharge';
+      phoneBtn.style.background = '#E63946';
+      phoneBtn.style.opacity = '1';
+    } else if (stage === 2) {
+      phoneTitle.textContent = 'Paying ₹500';
+      phoneBody.textContent  = 'UPI · 1 tap';
+      phoneBtn.textContent   = '••• processing';
+      phoneBtn.style.background = '#F4A261';
+      phoneBtn.style.opacity = '1';
+    } else {
+      phoneTitle.textContent = 'Cleared ✓';
+      phoneBody.textContent  = 'FASTag ready. Drive on.';
+      phoneBtn.textContent   = 'OK';
+      phoneBtn.style.background = '#06A77D';
+      phoneBtn.style.opacity = '1';
+    }
+  }
+  phoneState(0);
+
+  // ---- Main loop -----------------------------------------------------------
+  let running = false;
+  let startTs = 0;
+  let rafId = null;
+  let hornPlayed = false;
+  let pingPlayed = false;
+
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+  function update(ts) {
+    if (!startTs) startTs = ts;
+    const elapsed = ts - startTs;
+    const p = Math.min(1, elapsed / DURATION_MS);     // 0..1 wall progress
+    const e = easeOut(p);
+    const simSec = e * SIM_MAX_SEC;                   // 0..300 sim seconds
+
+    // ---- WITHOUT panel ----
+    const jamProgress = Math.max(0, Math.min(1, simSec / 180));
+
+    for (let i = 0; i < CAR_COUNT; i++) {
+      const stopFrac = 0.85 - i * 0.085;
+      const arrival = Math.max(0, Math.min(1, (p - i * 0.04) / 0.6));
+      const startFrac = -0.05 - i * 0.08;
+      const curFrac = startFrac + (stopFrac - startFrac) * easeOut(arrival);
+      placeCar(carsWithout[i], laneWithout, curFrac);
+      if (arrival > 0.85) carsWithout[i].style.background = '#E63946';
+      else if (arrival > 0.5) carsWithout[i].style.background = '#F4A261';
+      else carsWithout[i].style.background = '#06A77D';
+    }
+
+    const wave = document.getElementById('waveWithout');
+    if (jamProgress > 0.05) {
+      const laneW = laneWithout.clientWidth;
+      const waveW = laneW * 0.85 * jamProgress;
+      wave.style.left = (laneW - 80 - waveW) + 'px';
+      wave.style.width = waveW + 'px';
+      wave.style.opacity = String(0.2 + 0.6 * jamProgress);
+    }
+
+    elVehicles.textContent = fmtInt(FINAL.vehicles * e);
+    elMinutes.textContent  = fmtMinutes(FINAL.minutes * e);
+    elFuel.textContent     = fmtMoney(FINAL.fuel * e);
+    elAmb.textContent      = fmtInt(FINAL.ambulances * e);
+
+    tickerWithoutRows.forEach((row, i) => {
+      if (simSec >= withoutTimes[i]) row.classList.add('shown');
+    });
+
+    if (!hornPlayed && simSec >= 90) { hornPlayed = true; playHorn(); }
+
+    // ---- WITH panel ----
+    const barWith = document.getElementById('barWith');
+    if (simSec >= 120) barWith.style.transform = 'rotate(-70deg)';
+    else barWith.style.transform = 'rotate(0deg)';
+
+    for (let i = 0; i < CAR_COUNT; i++) {
+      const startFrac = -0.05 - i * 0.08;
+      const endFrac   = 1.05 - i * 0.02;
+      const arrival = Math.max(0, Math.min(1, (p - i * 0.03) / 0.9));
+      const curFrac = startFrac + (endFrac - startFrac) * arrival;
+      placeCar(carsWith[i], laneWith, curFrac);
+      carsWith[i].style.background = '#06A77D';
+    }
+
+    if (simSec < 60) phoneState(1);
+    else if (simSec < 120) phoneState(2);
+    else phoneState(3);
+
+    if (!pingPlayed && simSec >= 60) { pingPlayed = true; playPing(); }
+
+    tickerWithRows.forEach((row, i) => {
+      if (simSec >= withTimes[i]) row.classList.add('shown');
+    });
+
+    if (p < 1) {
+      rafId = requestAnimationFrame(update);
+    } else {
+      // Snap to exact final values
+      elVehicles.textContent = fmtInt(FINAL.vehicles);
+      elMinutes.textContent  = fmtMinutes(FINAL.minutes);
+      elFuel.textContent     = fmtMoney(FINAL.fuel);
+      elAmb.textContent      = fmtInt(FINAL.ambulances);
+      running = false;
+      document.getElementById('runBtnIcon').textContent  = '↻';
+      document.getElementById('runBtnLabel').textContent = 'RUN AGAIN';
+    }
+  }
+
+  function startSim() {
+    if (running) return;
+    running = true;
+    startTs = 0;
+    hornPlayed = false;
+    pingPlayed = false;
+    resetTickers();
+    resetCounters();
+    resetPositions();
+    phoneState(0);
+    if (audioOn) ensureCtx();
+    rafId = requestAnimationFrame(update);
+  }
+
+  function resetSim() {
+    if (rafId) cancelAnimationFrame(rafId);
+    running = false;
+    startTs = 0;
+    hornPlayed = false;
+    pingPlayed = false;
+    resetTickers();
+    resetCounters();
+    resetPositions();
+    phoneState(0);
+  }
+
+  const runBtn = document.getElementById('runBtn');
+  runBtn.addEventListener('click', () => {
+    if (running) return;
+    const label = document.getElementById('runBtnLabel');
+    if (label.textContent === 'RUN AGAIN') {
+      resetSim();
+    }
+    document.getElementById('runBtnIcon').textContent  = '■';
+    document.getElementById('runBtnLabel').textContent = 'RUNNING…';
+    startSim();
+  });
+
+  let resizeTm = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTm);
+    resizeTm = setTimeout(() => {
+      if (!running) resetPositions();
+    }, 150);
+  });
+
+  // ---- Scroll reveal -------------------------------------------------------
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+})();
+</script>
+</body>
+</html>
